@@ -9,12 +9,15 @@ from django.shortcuts import get_object_or_404, render
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
+from imports.executor import ImportExecutionError, execute_import
+from imports.todoist import TodoistCsvError, TodoistImportAdapter
 from projects.models import Project
 
 from .exporters import build_project_archive, build_user_archive
 from .restorers import ArchiveRestoreError, restore_user_archive as restore_archive_data
 
 MAX_RESTORE_ARCHIVE_BYTES = 25 * 1024 * 1024
+MAX_PROVIDER_IMPORT_BYTES = 25 * 1024 * 1024
 
 
 def _json_download(payload, filename):
@@ -108,3 +111,49 @@ def restore_user_archive(request):
         return _render_index(request, restore_error=str(exc))
 
     return _render_index(request, restore_summary=summary)
+
+
+@login_required
+@require_POST
+def import_todoist_csv(request):
+    """Import one verified-format Todoist project CSV as a private project."""
+    project_name = request.POST.get("project_name", "").strip()
+    upload = request.FILES.get("todoist_csv")
+    if not project_name:
+        return _render_index(
+            request,
+            todoist_error="Enter the private GoreeCloud project name for this Todoist CSV.",
+        )
+    if upload is None:
+        return _render_index(request, todoist_error="Choose a Todoist project CSV file.")
+    if upload.size > MAX_PROVIDER_IMPORT_BYTES:
+        return _render_index(
+            request,
+            todoist_error="The selected CSV exceeds the 25 MiB import-upload limit.",
+        )
+
+    try:
+        raw = upload.read(MAX_PROVIDER_IMPORT_BYTES + 1)
+        if len(raw) > MAX_PROVIDER_IMPORT_BYTES:
+            raise TodoistCsvError(
+                "The selected CSV exceeds the 25 MiB import-upload limit."
+            )
+        text = raw.decode("utf-8-sig")
+        bundle = TodoistImportAdapter().normalize_csv(
+            text,
+            project_name=project_name,
+        )
+        summary = execute_import(user=request.user, bundle=bundle)
+    except UnicodeDecodeError:
+        return _render_index(
+            request,
+            todoist_error="Todoist CSV files must be UTF-8 encoded.",
+        )
+    except (TodoistCsvError, ImportExecutionError) as exc:
+        return _render_index(request, todoist_error=str(exc))
+
+    return _render_index(
+        request,
+        todoist_summary=summary,
+        todoist_project_name=project_name,
+    )
