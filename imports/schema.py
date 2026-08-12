@@ -31,6 +31,13 @@ class NormalizedTask:
 
 
 @dataclass(frozen=True)
+class NormalizedComment:
+    source_id: str
+    task_source_id: str
+    body: str
+
+
+@dataclass(frozen=True)
 class NormalizedImportBundle:
     """Provider-independent intermediate form used before database writes."""
 
@@ -38,3 +45,4 @@ class NormalizedImportBundle:
     projects: tuple[NormalizedProject, ...] = field(default_factory=tuple)
     labels: tuple[NormalizedLabel, ...] = field(default_factory=tuple)
     tasks: tuple[NormalizedTask, ...] = field(default_factory=tuple)
+    comments: tuple[NormalizedComment, ...] = field(default_factory=tuple)
