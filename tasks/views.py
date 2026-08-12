@@ -2,6 +2,7 @@
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -11,7 +12,7 @@ from collaboration.forms import TaskCommentForm
 from collaboration.models import ActivityEvent
 from collaboration.services import record_activity
 
-from .forms import QuickAddForm, TaskForm, editable_projects_for
+from .forms import QuickAddForm, SubtaskForm, TaskForm, editable_projects_for
 from .models import Task
 
 
@@ -25,6 +26,34 @@ TASK_ACTIVITY_FIELDS = (
     ("priority", "priority"),
     ("status", "status"),
     ("due_at", "due date"),
+    ("is_goreecloud_work", "GoreeCloud work classification"),
+    ("assigned_system", "assigned system"),
+    ("assigned_service", "assigned service"),
+    ("environment", "environment"),
+    ("workload_category", "workload category"),
+    ("blocker", "blocker"),
+    ("resume_condition", "resume condition"),
+    ("backup_prerequisite", "backup prerequisite"),
+    ("recovery_requirement", "recovery requirement"),
+    ("validation_requirement", "validation requirement"),
+    ("documentation_requirement", "documentation requirement"),
+    ("related_change_record", "related change record"),
+    ("related_documentation", "related documentation"),
+)
+
+OPERATIONAL_FIELDS = (
+    "assigned_system",
+    "assigned_service",
+    "environment",
+    "workload_category",
+    "blocker",
+    "resume_condition",
+    "backup_prerequisite",
+    "recovery_requirement",
+    "validation_requirement",
+    "documentation_requirement",
+    "related_change_record",
+    "related_documentation",
 )
 
 
@@ -33,7 +62,8 @@ def _active_tasks(user):
     return (
         Task.objects.visible_to(user)
         .exclude(status__in=TERMINAL_STATUSES)
-        .select_related("project", "creator", "assignee")
+        .select_related("project", "creator", "assignee", "parent")
+        .prefetch_related("labels")
     )
 
 
@@ -53,8 +83,18 @@ def _decorate_editability(user, queryset):
     return tasks
 
 
-def _list_context(request, *, tasks, active_view, heading, eyebrow):
-    """Build shared context for Inbox, Today, and Upcoming."""
+def _list_context(
+    request,
+    *,
+    tasks,
+    active_view,
+    heading,
+    eyebrow,
+    search_query="",
+    empty_heading="No tasks here.",
+    empty_copy="Use Quick Add above to capture work without leaving this view.",
+):
+    """Build shared context for Inbox, date views, and search."""
     decorated = _decorate_editability(request.user, tasks)
     return {
         "tasks": decorated,
@@ -62,6 +102,9 @@ def _list_context(request, *, tasks, active_view, heading, eyebrow):
         "active_view": active_view,
         "heading": heading,
         "eyebrow": eyebrow,
+        "search_query": search_query,
+        "empty_heading": empty_heading,
+        "empty_copy": empty_copy,
         "quick_add_form": QuickAddForm(user=request.user),
     }
 
@@ -76,7 +119,12 @@ def _safe_redirect_back(request):
 
 def _task_snapshot(task):
     """Capture only fields used to decide whether an edit is material."""
-    return {field_name: getattr(task, field_name) for field_name, _ in TASK_ACTIVITY_FIELDS}
+    snapshot = {
+        field_name: getattr(task, field_name)
+        for field_name, _ in TASK_ACTIVITY_FIELDS
+    }
+    snapshot["labels"] = set(task.labels.values_list("pk", flat=True))
+    return snapshot
 
 
 def _changed_task_fields(before, task):
@@ -85,6 +133,10 @@ def _changed_task_fields(before, task):
     for field_name, label in TASK_ACTIVITY_FIELDS:
         if before[field_name] != getattr(task, field_name):
             changed.append((field_name, label))
+
+    current_labels = set(task.labels.values_list("pk", flat=True))
+    if before["labels"] != current_labels:
+        changed.append(("labels", "labels"))
     return changed
 
 
@@ -114,7 +166,11 @@ def _record_task_edit_activity(request, task, before):
         elif len(changed_labels) == 2:
             summary = f"updated {changed_labels[0]} and {changed_labels[1]}"
         else:
-            summary = "updated " + ", ".join(changed_labels[:-1]) + f", and {changed_labels[-1]}"
+            summary = (
+                "updated "
+                + ", ".join(changed_labels[:-1])
+                + f", and {changed_labels[-1]}"
+            )
 
     record_activity(
         actor=request.user,
@@ -123,6 +179,24 @@ def _record_task_edit_activity(request, task, before):
         task=task,
         details={"fields": changed_keys},
     )
+
+
+def _has_operational_metadata(task):
+    """Return whether the task should present the GoreeCloud operational panel."""
+    return task.is_goreecloud_work or any(
+        bool(getattr(task, field_name)) for field_name in OPERATIONAL_FIELDS
+    )
+
+
+def _operational_editor_open(form, task=None):
+    """Keep the advanced editor collapsed unless it is relevant or has errors."""
+    if task is not None and _has_operational_metadata(task):
+        return True
+    if form.is_bound:
+        if form.data.get("is_goreecloud_work"):
+            return True
+        return any(form[field_name].errors for field_name in OPERATIONAL_FIELDS)
+    return False
 
 
 @login_required
@@ -174,28 +248,88 @@ def upcoming(request):
 
 
 @login_required
+def search(request):
+    """Search only tasks already visible to the authenticated user."""
+    query = request.GET.get("q", "").strip()[:200]
+    tasks = (
+        Task.objects.visible_to(request.user)
+        .select_related("project", "creator", "assignee", "parent")
+        .prefetch_related("labels")
+    )
+    if query:
+        tasks = tasks.filter(
+            Q(title__icontains=query)
+            | Q(description__icontains=query)
+            | Q(project__name__icontains=query)
+            | Q(labels__name__icontains=query)
+            | Q(creator__username__icontains=query)
+            | Q(assignee__username__icontains=query)
+            | Q(assigned_system__icontains=query)
+            | Q(assigned_service__icontains=query)
+            | Q(environment__icontains=query)
+            | Q(workload_category__icontains=query)
+            | Q(blocker__icontains=query)
+            | Q(resume_condition__icontains=query)
+            | Q(related_change_record__icontains=query)
+            | Q(related_documentation__icontains=query)
+        ).distinct()
+    else:
+        tasks = tasks.none()
+
+    context = _list_context(
+        request,
+        tasks=tasks,
+        active_view="search",
+        heading="Search",
+        eyebrow=f'Results for “{query}”' if query else "Find accessible work",
+        search_query=query,
+        empty_heading="No matching tasks." if query else "Enter a search term.",
+        empty_copy=(
+            "Try a task title, description, project, label, system, service, blocker, or related record."
+            if query
+            else "Search only returns work your account is already authorized to read."
+        ),
+    )
+    return render(request, "tasks/task_list.html", context)
+
+
+@login_required
 def task_detail(request, pk):
-    """Show task content, comments, and material history to authorized readers."""
+    """Show task content, subtasks, comments, labels, and material history."""
     task = get_object_or_404(
-        Task.objects.visible_to(request.user).select_related(
+        Task.objects.visible_to(request.user)
+        .select_related(
             "project",
             "project__owner",
             "creator",
             "assignee",
-        ),
+            "parent",
+        )
+        .prefetch_related("labels"),
         pk=pk,
     )
     can_edit = Task.objects.editable_by(request.user).filter(pk=task.pk).exists()
+    subtasks = _decorate_editability(
+        request.user,
+        Task.objects.visible_to(request.user)
+        .filter(parent=task)
+        .select_related("project", "creator", "assignee", "parent")
+        .prefetch_related("labels")
+        .order_by("priority", "created_at", "id"),
+    )
 
     return render(
         request,
         "tasks/task_detail.html",
         {
             "task": task,
+            "subtasks": subtasks,
+            "subtask_form": SubtaskForm(),
             "comments": task.comments.select_related("author").all(),
             "activity_events": task.activity_events.select_related("actor").all()[:100],
             "comment_form": TaskCommentForm(),
             "user_can_edit": can_edit,
+            "has_operational_metadata": _has_operational_metadata(task),
             "active_view": "",
         },
     )
@@ -238,6 +372,7 @@ def task_create(request):
             if task.assignee_id is None:
                 task.assignee = request.user
             task.save()
+            form.save_m2m()
 
             record_activity(
                 actor=request.user,
@@ -260,7 +395,12 @@ def task_create(request):
     return render(
         request,
         "tasks/task_form.html",
-        {"form": form, "task": None, "active_view": ""},
+        {
+            "form": form,
+            "task": None,
+            "active_view": "",
+            "operational_open": _operational_editor_open(form),
+        },
     )
 
 
@@ -268,7 +408,9 @@ def task_create(request):
 def task_edit(request, pk):
     """Edit a task only when the normal application authorization permits it."""
     task = get_object_or_404(
-        Task.objects.editable_by(request.user).select_related("project"),
+        Task.objects.editable_by(request.user)
+        .select_related("project")
+        .prefetch_related("labels"),
         pk=pk,
     )
 
@@ -286,8 +428,45 @@ def task_edit(request, pk):
     return render(
         request,
         "tasks/task_form.html",
-        {"form": form, "task": task, "active_view": ""},
+        {
+            "form": form,
+            "task": task,
+            "active_view": "",
+            "operational_open": _operational_editor_open(form, task),
+        },
     )
+
+
+@login_required
+@require_POST
+def subtask_add(request, parent_pk):
+    """Create a subtask only inside a parent task the user may edit."""
+    parent = get_object_or_404(
+        Task.objects.editable_by(request.user).select_related("project"),
+        pk=parent_pk,
+    )
+    form = SubtaskForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "The subtask could not be added. Check the entered values.")
+        return redirect("tasks:task_detail", pk=parent.pk)
+
+    subtask = form.save(commit=False)
+    subtask.parent = parent
+    subtask.project = parent.project
+    subtask.creator = request.user
+    subtask.assignee = request.user
+    subtask.status = Task.Status.READY
+    subtask.save()
+
+    record_activity(
+        actor=request.user,
+        kind=ActivityEvent.Kind.TASK_CREATED,
+        summary="created the subtask",
+        task=subtask,
+        details={"source": "subtask", "parent_task_id": parent.pk},
+    )
+    messages.success(request, "Subtask added.")
+    return redirect("tasks:task_detail", pk=parent.pk)
 
 
 @login_required

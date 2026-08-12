@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "accounts",
     "projects",
+    "labels",
     "tasks",
     "collaboration",
 ]

@@ -12,6 +12,7 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("today/", views.today, name="today"),
     path("upcoming/", views.upcoming, name="upcoming"),
+    path("search/", views.search, name="search"),
     path("tasks/add/", views.quick_add, name="quick_add"),
     path("tasks/new/", views.task_create, name="task_create"),
     path("tasks/<int:pk>/", views.task_detail, name="task_detail"),
@@ -20,6 +21,11 @@ urlpatterns = [
         "tasks/<int:task_pk>/comments/add/",
         collaboration_views.comment_add,
         name="task_comment_add",
+    ),
+    path(
+        "tasks/<int:parent_pk>/subtasks/add/",
+        views.subtask_add,
+        name="subtask_add",
     ),
     path(
         "tasks/<int:pk>/toggle-complete/",

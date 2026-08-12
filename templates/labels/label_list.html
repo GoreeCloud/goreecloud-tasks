@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Labels — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow">Private and project-scoped organization</p>
+        <h1>Labels</h1>
+      </div>
+      <span class="count">{{ labels|length }}</span>
+    </header>
+
+    <form class="task-editor label-create-form" method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <label class="field-group" for="{{ form.name.id_for_label }}">
+        <span>{{ form.name.label }}</span>
+        {{ form.name }}
+        {% for error in form.name.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+      </label>
+      <label class="field-group" for="{{ form.project.id_for_label }}">
+        <span>Scope</span>
+        {{ form.project }}
+        {% if form.project.help_text %}<small>{{ form.project.help_text }}</small>{% endif %}
+        {% for error in form.project.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+      </label>
+      <div class="editor-actions">
+        <button class="primary-button compact" type="submit">Create label</button>
+      </div>
+    </form>
+
+    {% if labels %}
+      <div class="label-directory">
+        {% for label in labels %}
+          <article class="label-directory-row">
+            <div>
+              <strong>{{ label.name }}</strong>
+              <div class="task-meta">
+                {% if label.project %}Project · {{ label.project.name }}{% else %}Private personal label{% endif %}
+                {% if not label.user_can_edit %} · Read only{% endif %}
+              </div>
+            </div>
+            {% if label.user_can_edit %}
+              <form method="post" action="{% url 'labels:delete' label.pk %}">
+                {% csrf_token %}
+                <button class="danger-button compact" type="submit">Delete</button>
+              </form>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h2>No labels yet.</h2>
+        <p>Create a private personal label or a label inside a project you can edit.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
