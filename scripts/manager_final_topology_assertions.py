@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import tempfile
 import threading
@@ -92,41 +91,38 @@ def _assert_manager_health() -> None:
 
 
 def _assert_manager_web(*, expect_task: bool) -> None:
+    """Render Manager's authenticated Tasks view with production cookie settings intact.
+
+    Manager intentionally marks session and CSRF cookies Secure whenever DEBUG is false.
+    The disposable container has no TLS listener because HTTPS termination belongs to Caddy,
+    so an ordinary loopback HTTP login would correctly refuse to send the Secure CSRF cookie.
+    Django's test client lets this gate exercise the authenticated view as an HTTPS request
+    without weakening the production-pattern Manager settings or publishing a host port.
+    """
+
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "goreecloud_manager.settings")
+    import django
+
+    django.setup()
+
+    from django.test import Client
+
     username = os.environ["MANAGER_WEB_USERNAME"]
     password = os.environ["MANAGER_WEB_PASSWORD"]
-    base_url = "http://127.0.0.1:8000"
+    client = Client()
+    assert client.login(username=username, password=password), "Manager CI login failed."
 
-    with httpx.Client(base_url=base_url, follow_redirects=True, timeout=5.0) as client:
-        login = client.get("/login/")
-        assert login.status_code == 200, login.text
-        match = re.search(
-            r'name=["\']csrfmiddlewaretoken["\']\s+value=["\']([^"\']+)',
-            login.text,
-        )
-        assert match, "Manager login page did not provide a CSRF token."
-
-        authenticated = client.post(
-            "/login/",
-            data={
-                "username": username,
-                "password": password,
-                "csrfmiddlewaretoken": match.group(1),
-                "next": "/tasks/",
-            },
-            headers={"Referer": f"{base_url}/login/"},
-        )
-        assert authenticated.status_code == 200, authenticated.text
-
-        page = client.get("/tasks/")
-        assert page.status_code == 200, page.text
-        if expect_task:
-            assert VISIBLE_TASK_TITLE in page.text
-        else:
-            assert VISIBLE_TASK_TITLE not in page.text
-        assert SENSITIVE_DESCRIPTION not in page.text
-        assert SENSITIVE_COMMENT not in page.text
-        for title in FORBIDDEN_TITLES:
-            assert title not in page.text
+    page = client.get("/tasks/", secure=True)
+    assert page.status_code == 200, page.content.decode("utf-8", errors="replace")
+    text = page.content.decode("utf-8", errors="replace")
+    if expect_task:
+        assert VISIBLE_TASK_TITLE in text
+    else:
+        assert VISIBLE_TASK_TITLE not in text
+    assert SENSITIVE_DESCRIPTION not in text
+    assert SENSITIVE_COMMENT not in text
+    for title in FORBIDDEN_TITLES:
+        assert title not in text
 
 
 def _assert_schema_fail_soft(payload: dict) -> None:
