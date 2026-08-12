@@ -57,7 +57,9 @@ jobs:
           mkdir -p secrets
           printf '%s\n' 'ci-only-django-secret-not-for-production' > secrets/django_secret_key
           printf '%s\n' 'ci-only-postgres-password' > secrets/postgres_password
-          chmod 600 .env secrets/django_secret_key secrets/postgres_password
+          chmod 600 .env
+          sudo chgrp 20001 secrets/django_secret_key secrets/postgres_password
+          chmod 640 secrets/django_secret_key secrets/postgres_password
 
       - name: Validate Docker Compose configuration
         run: docker compose config --quiet
