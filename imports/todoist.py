@@ -51,12 +51,15 @@ _KNOWN_HEADERS = {
     "DEADLINE_LANG",
     "IS_COLLAPSED",
 }
+# Todoist's current CSV guide defines blank PRIORITY as p1, so the blank
+# source value intentionally follows that provider behavior instead of being
+# interpreted as an unspecified or low-priority value.
 _PRIORITY_MAP = {
     "1": Task.Priority.P1_URGENT,
     "2": Task.Priority.P2_HIGH,
     "3": Task.Priority.P3_STANDARD,
     "4": Task.Priority.P4_LOW,
-    "": Task.Priority.P4_LOW,
+    "": Task.Priority.P1_URGENT,
 }
 
 
