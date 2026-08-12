@@ -51,6 +51,7 @@
                 {% if task.project %} · {{ task.project.name }}{% endif %}
                 {% if task.assignee %} · Assigned to {{ task.assignee.preferred_name }}{% endif %}
                 {% if task.due_at %} · Due {{ task.due_at|date:"M j, Y g:i A" }}{% endif %}
+                · <a href="{% url 'notifications:settings' %}?task={{ task.pk }}">Remind me</a>
               </div>
             </div>
           </li>
