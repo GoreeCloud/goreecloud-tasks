@@ -11,9 +11,10 @@ The current implementation establishes the multi-user security boundary, usable
 task and project workflows, explicit collaboration, labels, subtasks, scoped
 search, the first GoreeCloud operational metadata, authorization-aware portable
 JSON export, safe provider-neutral import execution, guarded user-archive
-restoration, verified-format Todoist project CSV migration, and a private
-user-reminder/ntfy delivery foundation. Production publication remains blocked on
-the broader v0.1 acceptance requirements, including approved backup and isolated
+restoration, verified-format Todoist project CSV migration, a private
+user-reminder/ntfy delivery foundation, and schema-v2 notification/reminder
+portability for user archives. Production publication remains blocked on the
+broader v0.1 acceptance requirements, including approved backup and isolated
 restoration validation for the eventual production environment.
 
 ## Implemented Foundation
@@ -70,6 +71,10 @@ restoration validation for the eventual production environment.
   claiming that a production scheduler has been deployed.
 - Versioned, authenticated JSON exports for user-owned data and owner-only
   project archives.
+- Schema-v2 user archives that preserve notification preferences and reminders
+  only when the reminder's task is already inside the user-owned archive scope.
+- Backward-compatible schema-v1 user-archive restoration for core application
+  data that predates reminder portability.
 - Export scope that does not turn ordinary shared-project visibility into a
   bulk-export permission over another user's project.
 - Source-neutral external-import records and an atomic executor that validates
@@ -346,13 +351,27 @@ security and deployment boundary.
 
 Authenticated users can open the Data area and download a machine-readable JSON
 archive using the versioned `goreecloud.tasks.export` format. The current schema
-version is `1`.
+version is `2`.
 
 A user archive contains that user's private personal tasks and labels plus
 projects the user owns and the application-owned records contained by those
 projects. Projects owned by another user are excluded even when the exporter has
 active shared-project access. This prevents normal collaboration permissions
 from silently becoming bulk-export permissions.
+
+Schema version 2 also preserves the user's persisted notification preferences and
+reminders whose referenced tasks are already inside the same user-owned archive
+scope. A personal reminder attached only to another owner's shared project is
+not exported because the corresponding task is not part of the user's bulk
+archive. The archive records only how many such reminder records were excluded,
+without exporting the excluded task content. Project archives never include
+private user notification preferences or reminder schedules.
+
+The generated ntfy topic may be preserved as user configuration, but no ntfy
+access token, publisher credential, password, session, or other reusable secret
+is included. Transient reminder `last_error` delivery text is also excluded from
+portable archives. Reminder scheduling state, delivery/cancellation timestamps,
+attempt count, last-attempt timestamp, and historical timestamps are preserved.
 
 Project archives are owner-only in v0.1. They preserve the selected project's
 memberships, labels, tasks, task relationships, comments, activity history,
@@ -368,16 +387,21 @@ before persistence. The executor creates only private data owned by the importin
 user, never creates accounts or memberships, and refuses project or personal-label
 name collisions instead of silently merging records.
 
-The Data portability area also provides guarded full-user-archive recovery. A
-schema-v1 `user_archive` can be restored only to an authenticated account whose
-username exactly matches the archive and whose owned Tasks data set is clean.
-Every archived collaborator username must already exist locally. Restoration
-validates application relationships before reconstructing projects, historical
-memberships, labels, tasks, subtasks, comments, activity, timestamps, and
-operational metadata inside one transaction. It never creates user accounts and
-does not overwrite or merge existing owned Tasks data.
+The Data portability area also provides guarded full-user-archive recovery.
+Schema-v1 and schema-v2 `user_archive` files can be restored only to an
+authenticated account whose username exactly matches the archive and whose owned
+Tasks data set is clean. Every archived collaborator username must already exist
+locally. Schema-v2 restoration additionally requires that the target user have no
+existing Tasks reminders so private reminder state is not silently merged.
+Restoration validates application relationships before reconstructing projects,
+historical memberships, labels, tasks, subtasks, comments, activity, timestamps,
+operational metadata, notification preferences, and eligible reminders inside one
+outer transaction. An archived ntfy topic is rejected if another local account is
+already using it. The restore path never creates user accounts and does not
+overwrite or merge existing owned Tasks data. Legacy schema-v1 archives remain
+restorable for the core data model but do not contain notification state.
 
-The same area now accepts a Todoist project CSV and imports it into a new private
+The same area accepts a Todoist project CSV and imports it into a new private
 GoreeCloud project. The verified mapping supports `task`, `section`, and `note`
 rows; Todoist p1-p4; INDENT-based task hierarchy; task-content `@label` tokens;
 and task notes as GoreeCloud comments. Provider author/responsible identity text,
@@ -386,10 +410,6 @@ duration values, and unknown source columns are preserved as source metadata whe
 there is no safe current native field. Only an explicit timezone-aware
 ISO-8601/RFC3339 date is promoted to the native due timestamp. The provider file
 never creates GoreeCloud identities, memberships, or shared projects.
-
-The schema-v1 archive predates the reminder model added during v0.1 development.
-Reminder and notification-preference export/restoration must be designed and
-tested explicitly before those records are claimed as part of portable recovery.
 
 ## Tests
 
@@ -417,16 +437,20 @@ time-zone validation, authorization-scoped reminder task choices, Viewer-owned
 reminders without edit escalation, inaccessible-task refusal, closed-task
 cancellation, delivery-time authorization re-checks, disabled notification
 preferences, authenticated data-minimized ntfy publication, failed-delivery
-retry state, versioned export behavior, user/archive scope isolation, owner-only
-project export, relationship and operational-field preservation, sensitive
-account-field omission, provider-neutral private import execution, normalized
-comment persistence, invalid-import rollback, import collision refusal, full
-user-archive reconstruction, historical role and membership restoration,
-identity remapping, restore target isolation, missing collaborator refusal,
-restore confirmation/authentication, Todoist CSV delimiter/header validation,
-Todoist section/label/priority/indent/note mapping, conservative due-date
-handling, unknown-column preservation, authenticated Todoist web import, and
-Todoist project-name collision refusal.
+retry state, schema-v2 export behavior, notification-preference and owned-task
+reminder portability, exclusion of reminder state tied only to another owner's
+shared task, project-archive notification privacy, schema-v2 reminder
+restoration, schema-v1 restoration compatibility, ntfy-topic collision refusal,
+user/archive scope isolation, owner-only project export, relationship and
+operational-field preservation, sensitive account-field omission,
+provider-neutral private import execution, normalized comment persistence,
+invalid-import rollback, import collision refusal, full user-archive
+reconstruction, historical role and membership restoration, identity remapping,
+restore target isolation, missing collaborator refusal, restore
+confirmation/authentication, Todoist CSV delimiter/header validation, Todoist
+section/label/priority/indent/note mapping, conservative due-date handling,
+unknown-column preservation, authenticated Todoist web import, and Todoist
+project-name collision refusal.
 
 GitHub Actions additionally builds and starts the Docker Compose development
 stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
@@ -457,11 +481,10 @@ goreecloud-tasks/
 ```
 
 Remaining milestone work includes server-side ntfy identity/ACL provisioning and
-end-to-end delivery validation before notification production use, explicit
-reminder export/restoration semantics, project-archive restore semantics if
-required, additional GoreeCloud operational relationships, other integrations,
-administrative disaster-recovery export, and the public application API when
-those milestones require them.
+end-to-end delivery validation before notification production use,
+project-archive restore semantics if required, additional GoreeCloud operational
+relationships, other integrations, administrative disaster-recovery export, and
+the public application API when those milestones require them.
 
 ## Production Boundary
 
