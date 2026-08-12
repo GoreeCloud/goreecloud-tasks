@@ -21,6 +21,14 @@
     {% endif %}
   </header>
 
+  {% if messages %}
+    <div class="flash-region" aria-live="polite">
+      {% for message in messages %}
+        <div class="notice {{ message.tags|default:'info' }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   <main>
     {% block content %}{% endblock %}
   </main>

@@ -43,3 +43,52 @@ jobs:
 
       - name: Run tests
         run: python manage.py test
+
+  docker-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Prepare isolated CI configuration
+        run: |
+          cp .env.example .env
+          mkdir -p secrets
+          printf '%s\n' 'ci-only-django-secret-not-for-production' > secrets/django_secret_key
+          printf '%s\n' 'ci-only-postgres-password' > secrets/postgres_password
+          chmod 600 .env
+          sudo chgrp 20001 secrets/django_secret_key secrets/postgres_password
+          chmod 640 secrets/django_secret_key secrets/postgres_password
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build application image
+        run: docker compose build
+
+      - name: Start PostgreSQL and apply migrations
+        run: |
+          docker compose up -d db
+          docker compose run --rm web python manage.py migrate --noinput
+
+      - name: Start application and verify health
+        run: |
+          docker compose up -d web
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error http://127.0.0.1:8000/health/; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs web db
+          exit 1
+
+      - name: Show final container state
+        if: always()
+        run: docker compose ps
+
+      - name: Stop isolated stack
+        if: always()
+        run: docker compose down --volumes --remove-orphans

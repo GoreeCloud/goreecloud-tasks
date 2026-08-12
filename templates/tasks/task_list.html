@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{{ heading }} — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow">{{ eyebrow }}</p>
+        <h1>{{ heading }}</h1>
+      </div>
+      <span class="count">{{ task_count }}</span>
+    </header>
+
+    {% include "tasks/_quick_add.html" %}
+
+    {% if tasks %}
+      <ul class="task-list">
+        {% for task in tasks %}
+          <li class="task-row">
+            {% if task.user_can_edit %}
+              <form class="complete-form" method="post" action="{% url 'tasks:task_toggle_complete' task.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="complete-button" type="submit" aria-label="Complete {{ task.title }}">✓</button>
+              </form>
+            {% else %}
+              <span class="complete-button read-only-indicator" aria-hidden="true"></span>
+            {% endif %}
+            <div class="task-content">
+              <div class="task-title-line">
+                {% if task.user_can_edit %}
+                  <a class="task-title" href="{% url 'tasks:task_edit' task.pk %}">{{ task.title }}</a>
+                {% else %}
+                  <strong class="task-title">{{ task.title }}</strong>
+                  <span class="read-only-badge">Read only</span>
+                {% endif %}
+              </div>
+              {% if task.description %}
+                <p class="task-description">{{ task.description|truncatechars:160 }}</p>
+              {% endif %}
+              <div class="task-meta">
+                {{ task.get_priority_display }} · {{ task.get_status_display }}
+                {% if task.project %} · {{ task.project.name }}{% endif %}
+                {% if task.assignee %} · Assigned to {{ task.assignee.preferred_name }}{% endif %}
+                {% if task.due_at %} · Due {{ task.due_at|date:"M j, Y g:i A" }}{% endif %}
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">
+        <h2>No tasks here.</h2>
+        <p>Use Quick Add above to capture work without leaving this view.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
