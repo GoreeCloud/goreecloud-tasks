@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This capability provides machine-readable portability for GoreeCloud Tasks without turning ordinary read access into a new bulk-exfiltration permission and without treating an uploaded archive as trusted database state.
+This capability provides machine-readable portability for GoreeCloud Tasks without turning ordinary read access into a new bulk-exfiltration permission and without treating an uploaded archive or provider file as trusted database state.
 
 ## Export format
 
@@ -28,9 +28,9 @@ Downloads and the authenticated portability page are marked `private, no-store`.
 
 ## Source-neutral external import execution
 
-The `imports` package defines a provider-neutral normalization schema and a database executor. Future provider adapters must translate provider-specific exports into `NormalizedImportBundle` before persistence.
+The `imports` package defines a provider-neutral normalization schema and a database executor. Provider adapters translate provider-specific exports into `NormalizedImportBundle` before persistence.
 
-The executor validates the complete normalized bundle before writing. Validation covers unique source identifiers, project and label names, project references, label scope, task-parent scope, parent cycles, task priorities, task statuses, and timezone-aware due timestamps.
+The executor validates the complete normalized bundle before writing. Validation covers unique source identifiers, project and label names, project references, label scope, task-parent scope, parent cycles, task priorities, task statuses, timezone-aware due timestamps, comment task references, and comment body limits.
 
 Execution is atomic. If validation or persistence fails, the import does not intentionally leave a partially created provider import.
 
@@ -40,6 +40,7 @@ External provider imports follow a deliberately narrow authorization boundary:
 - imported projects are owned by the authenticated importing user;
 - imported tasks are created and assigned to the authenticated importing user;
 - imported labels are owned by the authenticated importing user;
+- imported comments are attributed to the authenticated importing user;
 - no user accounts are created;
 - no project memberships are created;
 - no shared projects are created;
@@ -75,13 +76,34 @@ The Data portability page provides a user-archive upload control with an explici
 
 The restore form does not provide merge or overwrite options in v0.1. Those behaviors would require separate conflict-resolution semantics and additional authorization tests.
 
-## Todoist boundary
+## Todoist CSV migration
 
-A `TodoistImportAdapter` boundary remains present, but its parser intentionally raises `NotImplementedError`. GoreeCloud Tasks does not claim Todoist import compatibility until the selected Todoist export format has been verified, mapped into the source-neutral schema, and covered by migration tests.
+The Todoist adapter now supports the currently documented Todoist project CSV structure. The official format identifies rows as `task`, `section`, or `note` and documents columns including `CONTENT`, `DESCRIPTION`, `PRIORITY`, `INDENT`, `AUTHOR`, `RESPONSIBLE`, `DATE`, `DATE_LANG`, `TIMEZONE`, `DURATION`, `DURATION_UNIT`, `meta`, `DEADLINE`, `DEADLINE_LANG`, and optional section `IS_COLLAPSED` state.
+
+The parser accepts UTF-8 text and detects comma, semicolon, or tab delimiters. `TYPE` and `CONTENT` are required. Blank spacer rows and metadata-only rows are ignored; unsupported nonblank row types are rejected.
+
+The current migration mapping is deliberately explicit:
+
+- each uploaded project CSV becomes one new private GoreeCloud project;
+- Todoist p1, p2, p3, and p4 map to GoreeCloud P1, P2, P3, and P4 respectively, leaving GoreeCloud P0 reserved for critical operational work;
+- blank priority maps to GoreeCloud P4 rather than inventing an urgent priority for a source row without an explicit value;
+- `INDENT` levels 1 through 4 reconstruct task/subtask hierarchy and an orphaned indent is rejected;
+- task-content `@label` tokens become project-scoped GoreeCloud labels and are removed from the imported title;
+- `note` rows become task comments attributed to the authenticated importing user;
+- only a timezone-aware ISO-8601/RFC3339 `DATE` value is mapped to the current native due timestamp;
+- natural-language and recurring Todoist dates are preserved as source metadata instead of being guessed into a concrete timestamp;
+- section names and section descriptions are preserved in task import metadata because GoreeCloud Tasks does not yet expose a native section entity;
+- Todoist author and responsible text is preserved as source metadata and never creates, resolves, or assigns a GoreeCloud user identity;
+- deadline, duration, language, timezone, and provider metadata are preserved in the task description when they do not have a safe native field;
+- unknown future nonblank CSV columns are also preserved as source metadata rather than silently discarded.
+
+Todoist project CSV export has provider-level limitations that GoreeCloud cannot reconstruct from absent source data. In particular, completed tasks are not present in Todoist project CSV exports, and the start date of a recurring date is not preserved by that export path. GoreeCloud Tasks does not claim to recover information that Todoist did not include in the supplied CSV.
+
+The upload endpoint is authenticated, limited to 25 MiB, decodes UTF-8 with optional BOM, normalizes the CSV, and then uses the same atomic source-neutral executor as other provider imports. A project-name collision stops the operation rather than merging into an existing project.
 
 ## Validation
 
-Regression coverage now verifies:
+Regression coverage verifies:
 
 - authenticated versioned export;
 - owner-only project bulk export;
@@ -90,10 +112,17 @@ Regression coverage now verifies:
 - sensitive account-field omission;
 - source-neutral import execution into private user-owned data;
 - atomic rejection of invalid normalized relationships;
+- normalized comment persistence and attribution;
 - collision refusal instead of silent merging;
 - full user-archive restoration of projects, memberships, labels, tasks, subtasks, comments, activity, identity relationships, historical inactive membership state, timestamps, and GoreeCloud operational metadata;
 - refusal to restore into a non-clean target account;
 - refusal to restore an archive to a differently named account;
 - refusal to restore when a required collaborator account is missing;
-- authentication and explicit confirmation on the web restore path; and
-- the non-claiming Todoist adapter boundary.
+- authentication and explicit confirmation on the web restore path;
+- Todoist comma-delimited and semicolon-delimited parsing;
+- Todoist section, label, priority, indent, note/comment, and source-metadata mapping;
+- conservative due-date mapping;
+- preservation of unknown future columns;
+- rejection of malformed Todoist headers and task hierarchy;
+- authenticated Todoist web import into a new private project; and
+- project-name collision refusal on Todoist web import.
