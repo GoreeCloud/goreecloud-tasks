@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.utils import timezone
 
+from collaboration.models import TaskComment
 from labels.models import Label
 from projects.models import Project
 from tasks.models import Task
@@ -30,6 +31,7 @@ class ImportSummary:
     projects_created: int
     labels_created: int
     tasks_created: int
+    comments_created: int
 
 
 def _clean_source_id(value, kind):
@@ -87,6 +89,7 @@ def validate_import_bundle(bundle: NormalizedImportBundle):
     projects = _index(bundle.projects, kind="project")
     labels = _index(bundle.labels, kind="label")
     tasks = _index(bundle.tasks, kind="task")
+    comments = _index(bundle.comments, kind="comment")
 
     project_names = set()
     for project in projects.values():
@@ -169,7 +172,21 @@ def validate_import_bundle(bundle: NormalizedImportBundle):
             )
 
     _validate_parent_graph(tasks)
-    return projects, labels, tasks
+
+    for comment_id, comment in comments.items():
+        task_id = _clean_source_id(comment.task_source_id, "comment task reference")
+        if task_id not in tasks:
+            raise ImportExecutionError(
+                f"Comment {comment_id} references unknown task {task_id}."
+            )
+        if not isinstance(comment.body, str) or not comment.body.strip():
+            raise ImportExecutionError(f"Comment {comment_id} body must contain text.")
+        if len(comment.body) > 10000:
+            raise ImportExecutionError(
+                f"Comment {comment_id} body may not exceed 10000 characters."
+            )
+
+    return projects, labels, tasks, comments
 
 
 @transaction.atomic
@@ -178,16 +195,22 @@ def execute_import(*, user, bundle: NormalizedImportBundle) -> ImportSummary:
 
     The operation is atomic. Existing records are never overwritten or merged.
     Imported projects are always private, imported tasks are created and assigned
-    to the importing user, and no project memberships are created.
+    to the importing user, comments are attributed to the importing user, and no
+    project memberships are created.
     """
     if not user or not user.is_authenticated:
         raise ImportExecutionError("An authenticated user is required for import.")
 
-    projects, labels, tasks = validate_import_bundle(bundle)
+    projects, labels, tasks, comments = validate_import_bundle(bundle)
 
-    project_names = [_clean_name(item.name, kind="project", max_length=200) for item in projects.values()]
+    project_names = [
+        _clean_name(item.name, kind="project", max_length=200)
+        for item in projects.values()
+    ]
     existing_projects = set(
-        Project.objects.filter(owner=user, name__in=project_names).values_list("name", flat=True)
+        Project.objects.filter(owner=user, name__in=project_names).values_list(
+            "name", flat=True
+        )
     )
     if existing_projects:
         names = ", ".join(sorted(existing_projects))
@@ -245,8 +268,14 @@ def execute_import(*, user, bundle: NormalizedImportBundle) -> ImportSummary:
                 if record.project_source_id is not None
                 else None
             ),
-            priority=(record.priority if record.priority is not None else Task.Priority.P3_STANDARD),
-            status=(record.status if record.status is not None else Task.Status.PLANNED),
+            priority=(
+                record.priority
+                if record.priority is not None
+                else Task.Priority.P3_STANDARD
+            ),
+            status=(
+                record.status if record.status is not None else Task.Status.PLANNED
+            ),
             due_at=record.due_at,
         )
 
@@ -262,9 +291,17 @@ def execute_import(*, user, bundle: NormalizedImportBundle) -> ImportSummary:
         task.parent = task_map[record.parent_source_id]
         task.save()
 
+    for record in comments.values():
+        TaskComment.objects.create(
+            task=task_map[record.task_source_id],
+            author=user,
+            body=record.body.strip(),
+        )
+
     return ImportSummary(
         source=bundle.source.strip(),
         projects_created=len(project_map),
         labels_created=len(label_map),
         tasks_created=len(task_map),
+        comments_created=len(comments),
     )
