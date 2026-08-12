@@ -121,7 +121,7 @@
                   {% csrf_token %}
                   <label class="sr-only" for="role-{{ membership.pk }}">Role for {{ membership.user.preferred_name }}</label>
                   <select id="role-{{ membership.pk }}" name="role">
-                    {% for value, label in membership.Role.choices %}
+                    {% for value, label in role_choices %}
                       <option value="{{ value }}"{% if membership.role == value %} selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                   </select>
