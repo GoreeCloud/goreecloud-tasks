@@ -261,8 +261,12 @@ def assert_visible(*, include_fail_soft: bool) -> None:
     assert wrong.status_code == 401, wrong.text
     assert wrong.json() == {"detail": "Authentication required."}
 
+    # A production-pattern POST can be rejected by Django's CSRF middleware before
+    # the GET-only view returns its own 405. Either 403 or 405 proves this live path
+    # did not accept the state-changing request; unit/API tests retain the exact 405
+    # contract at the view boundary.
     write_attempt = httpx.post(_api_url(), headers=_headers(), timeout=5.0)
-    assert write_attempt.status_code == 405, write_attempt.text
+    assert write_attempt.status_code in {403, 405}, write_attempt.text
 
     _assert_manager_health()
     _assert_manager_web(expect_task=True)
