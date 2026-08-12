@@ -127,8 +127,10 @@ The final-topology gate uses synthetic records for positive and negative cases. 
 - description and comment markers do not appear;
 - labels, creator details, and assignee details do not appear;
 - invalid bearer credentials return HTTP 401;
-- POST to the Manager API is rejected with HTTP 405; and
+- a state-changing POST is rejected by the live production-pattern path with HTTP 403 from CSRF middleware or HTTP 405 from the GET-only view boundary; and
 - Manager renders only the authorized operational record in its authenticated `/tasks/` page.
+
+The repository's application-level API regression tests retain the exact view-level GET-only/HTTP 405 contract. The final-topology test accepts the earlier HTTP 403 CSRF rejection because a real middleware stack may reject an unsafe method before it reaches the view; either response demonstrates that the live path did not accept the write.
 
 ## Membership Revocation and Restoration
 
