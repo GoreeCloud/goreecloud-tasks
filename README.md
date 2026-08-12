@@ -11,10 +11,10 @@ The current implementation establishes the multi-user security boundary, usable
 task and project workflows, explicit collaboration, labels, subtasks, scoped
 search, the first GoreeCloud operational metadata, authorization-aware portable
 JSON export, safe provider-neutral import execution, guarded user-archive
-restoration, and verified-format Todoist project CSV migration. Production
-publication remains blocked on the broader v0.1 acceptance requirements,
-including approved backup and isolated restoration validation for the eventual
-production environment.
+restoration, verified-format Todoist project CSV migration, and a private
+user-reminder/ntfy delivery foundation. Production publication remains blocked on
+the broader v0.1 acceptance requirements, including approved backup and isolated
+restoration validation for the eventual production environment.
 
 ## Implemented Foundation
 
@@ -51,6 +51,23 @@ production environment.
 - Project activity history for sharing and membership changes.
 - Data-minimized task edit history that records changed field keys instead of
   duplicating task descriptions, label names, blockers, or related-record text.
+- Private user-specific reminder records with independent reminder preferences,
+  lead time, local time-zone handling, delivery state, cancellation, and retry
+  metadata.
+- Reminder scheduling for any open task the current user may read, including a
+  Viewer-owned personal reminder that does not expand the Viewer role into task
+  edit permission.
+- Delivery-time authorization re-checks that cancel a pending reminder instead
+  of publishing task information after shared-project access is revoked.
+- Pending-reminder cancellation when the source task is completed or cancelled.
+- Non-identifying generated per-user ntfy topics under the
+  `goreecloud-tasks-*` namespace.
+- A dedicated ntfy publication boundary using environment/file-backed service
+  credentials rather than user credentials stored in the application database.
+- Data-minimized ntfy reminder messages containing only task title, due time when
+  present, and project name when present.
+- A `send_due_reminders` management command as a scheduler boundary without
+  claiming that a production scheduler has been deployed.
 - Versioned, authenticated JSON exports for user-owned data and owner-only
   project archives.
 - Export scope that does not turn ordinary shared-project visibility into a
@@ -169,6 +186,8 @@ After signing in, the application provides:
 - **Completion controls** for completing and reopening editable tasks.
 - **Task detail** for authorized readers, with labels, subtasks, discussion,
   operational metadata when relevant, and activity history.
+- **Remind me** shortcuts for scheduling private user-owned reminders without
+  changing shared task content.
 
 Shared-project Viewer membership remains read-only. Manager and Member roles may
 modify shared project work according to the project authorization boundary.
@@ -280,6 +299,49 @@ The v0.1 interface creates comments but does not yet provide comment edit/delete
 controls. Activity events are attributable history, not a general-purpose
 analytics or surveillance log.
 
+## Reminders and ntfy
+
+The Notifications area provides a private reminder layer owned by each individual
+user. Users can enable or disable reminders, choose a default lead time, maintain
+their IANA time zone, enable ntfy delivery, schedule reminders for readable open
+tasks, and cancel their own pending reminders.
+
+Reminder ownership is deliberately independent from shared-task edit rights. A
+Viewer may schedule a private reminder for a shared task the Viewer is currently
+authorized to read; the reminder is not shared with the project and does not
+allow that Viewer to edit the task.
+
+Every user receives a generated `goreecloud-tasks-<random-suffix>` ntfy topic
+that contains no username or email address. The topic is not a credential. The
+external ntfy server must still grant the dedicated GoreeCloud Tasks service
+identity write-only access to the approved Tasks topic namespace and the
+individual ntfy subscriber read-only access to that user's exact topic.
+GoreeCloud Tasks does not provision those ntfy identities, ACLs, tokens, or
+subscriptions itself.
+
+Immediately before a due reminder is published, the dispatcher checks the
+current task authorization again. If the user has lost access after scheduling
+the reminder, the reminder is cancelled rather than publishing content through a
+downstream notification service. Completed and cancelled tasks also cancel their
+pending reminders.
+
+The ntfy message is data-minimized to task title, due time when present, and
+project name when present. Task descriptions, comments, labels, blockers,
+recovery notes, related records, and other detailed task content are excluded.
+The publication token is deployment configuration and is never stored as user
+data or shown in the interface.
+
+Development exposes the dispatch boundary as:
+
+```bash
+python manage.py send_due_reminders
+```
+
+No production scheduler, ntfy service identity, real access token, server ACL,
+user subscription, Vaultwarden record, or production deployment is created by
+this repository feature. See `docs/feature-reminders-ntfy.md` for the complete
+security and deployment boundary.
+
 ## Data Portability
 
 Authenticated users can open the Data area and download a machine-readable JSON
@@ -325,6 +387,10 @@ there is no safe current native field. Only an explicit timezone-aware
 ISO-8601/RFC3339 date is promoted to the native due timestamp. The provider file
 never creates GoreeCloud identities, memberships, or shared projects.
 
+The schema-v1 archive predates the reminder model added during v0.1 development.
+Reminder and notification-preference export/restoration must be designed and
+tested explicitly before those records are claimed as part of portable recovery.
+
 ## Tests
 
 Run the local checks with:
@@ -346,16 +412,21 @@ project-history visibility, history isolation after access revocation, personal
 and project-label boundaries, invalid cross-scope labels, protected used-label
 deletion, subtask authorization and scope, search isolation, completed-task
 retrieval, optional operational metadata, data-minimized label-change activity,
-versioned export behavior, user/archive scope isolation, owner-only project
-export, relationship and operational-field preservation, sensitive account-field
-omission, provider-neutral private import execution, normalized comment
-persistence, invalid-import rollback, import collision refusal, full user-archive
-reconstruction, historical role and membership restoration, identity remapping,
-restore target isolation, missing collaborator refusal, restore
-confirmation/authentication, Todoist CSV delimiter/header validation, Todoist
-section/label/priority/indent/note mapping, conservative due-date handling,
-unknown-column preservation, authenticated Todoist web import, and Todoist
-project-name collision refusal.
+user-reminder authentication and ownership, non-identifying ntfy topics,
+time-zone validation, authorization-scoped reminder task choices, Viewer-owned
+reminders without edit escalation, inaccessible-task refusal, closed-task
+cancellation, delivery-time authorization re-checks, disabled notification
+preferences, authenticated data-minimized ntfy publication, failed-delivery
+retry state, versioned export behavior, user/archive scope isolation, owner-only
+project export, relationship and operational-field preservation, sensitive
+account-field omission, provider-neutral private import execution, normalized
+comment persistence, invalid-import rollback, import collision refusal, full
+user-archive reconstruction, historical role and membership restoration,
+identity remapping, restore target isolation, missing collaborator refusal,
+restore confirmation/authentication, Todoist CSV delimiter/header validation,
+Todoist section/label/priority/indent/note mapping, conservative due-date
+handling, unknown-column preservation, authenticated Todoist web import, and
+Todoist project-name collision refusal.
 
 GitHub Actions additionally builds and starts the Docker Compose development
 stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
@@ -365,11 +436,12 @@ stack with PostgreSQL, applies migrations, and verifies the live health endpoint
 ```text
 goreecloud-tasks/
 ├── goreecloud_tasks/   # Django project configuration
-├── accounts/           # Individual user identity and preferences
+├── accounts/           # Individual user identity, preferences, and request time zone
 ├── projects/           # Project ownership, memberships, roles, forms, and views
 ├── labels/             # Personal/project label scope and management
 ├── tasks/              # Core task models, forms, views, search, and authorization
 ├── collaboration/      # Task comments and attributable material activity
+├── notifications/      # Private reminders, preferences, ntfy delivery, and dispatch command
 ├── portability/        # Versioned export and guarded archive restoration
 ├── imports/            # Source-neutral migration records, execution, and adapters
 ├── templates/          # Server-rendered application templates
@@ -384,10 +456,12 @@ goreecloud-tasks/
 └── manage.py
 ```
 
-Remaining milestone work includes project-archive restore semantics if required,
-notifications and reminders, additional GoreeCloud operational relationships,
-integrations, administrative disaster-recovery export, and the public application
-API when those milestones require them.
+Remaining milestone work includes server-side ntfy identity/ACL provisioning and
+end-to-end delivery validation before notification production use, explicit
+reminder export/restoration semantics, project-archive restore semantics if
+required, additional GoreeCloud operational relationships, other integrations,
+administrative disaster-recovery export, and the public application API when
+those milestones require them.
 
 ## Production Boundary
 
@@ -395,8 +469,10 @@ This repository does not yet authorize production publication. Production use
 still requires the project specification's security, authorization, persistent
 storage, backup, restore, monitoring, reverse-proxy, upgrade, rollback, and
 multi-user acceptance requirements to be completed and documented. The presence
-of a user-archive restore function or provider CSV migration is not by itself
-proof of a production backup or disaster-recovery process.
+of a user-archive restore function, provider CSV migration, or application-side
+ntfy reminder publisher is not by itself proof of a production backup,
+disaster-recovery process, notification scheduler, or validated notification
+delivery path.
 
 ## License
 
