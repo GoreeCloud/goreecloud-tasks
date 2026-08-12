@@ -5,6 +5,7 @@ development and production values remain outside source control.
 """
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -27,6 +28,20 @@ def env_list(name, default=None):
     if raw is None:
         return list(default or [])
     return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def env_int(name, default, *, minimum=None, maximum=None):
+    """Read and validate a bounded integer environment setting."""
+    raw = os.getenv(name)
+    try:
+        value = int(raw) if raw is not None else int(default)
+    except (TypeError, ValueError) as exc:
+        raise ImproperlyConfigured(f"{name} must be an integer.") from exc
+    if minimum is not None and value < minimum:
+        raise ImproperlyConfigured(f"{name} must be at least {minimum}.")
+    if maximum is not None and value > maximum:
+        raise ImproperlyConfigured(f"{name} must be at most {maximum}.")
+    return value
 
 
 def secret_value(value_name, file_name, *, required=False):
@@ -97,6 +112,7 @@ INSTALLED_APPS = [
     "labels",
     "tasks",
     "collaboration",
+    "notifications.apps.NotificationsConfig",
 ]
 
 MIDDLEWARE = [
@@ -105,6 +121,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "accounts.middleware.UserTimezoneMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -190,6 +207,33 @@ TIME_ZONE = os.getenv(
 )
 USE_I18N = True
 USE_TZ = True
+
+# User-reminder and ntfy publisher configuration. The access token is never
+# stored in the application database and may be supplied through a protected file.
+NTFY_BASE_URL = os.getenv("NTFY_BASE_URL", "").strip().rstrip("/")
+NTFY_ACCESS_TOKEN = secret_value(
+    "NTFY_ACCESS_TOKEN",
+    "NTFY_ACCESS_TOKEN_FILE",
+    required=False,
+)
+NTFY_TIMEOUT_SECONDS = env_int(
+    "NTFY_TIMEOUT_SECONDS",
+    10,
+    minimum=1,
+    maximum=60,
+)
+NTFY_TOPIC_PREFIX = os.getenv("NTFY_TOPIC_PREFIX", "goreecloud-tasks").strip()
+if (
+    not re.fullmatch(r"[-_A-Za-z0-9]+", NTFY_TOPIC_PREFIX)
+    or len(NTFY_TOPIC_PREFIX) > 47
+):
+    raise ImproperlyConfigured(
+        "NTFY_TOPIC_PREFIX must contain only letters, numbers, dashes, or underscores and be at most 47 characters."
+    )
+
+# Optional application URL used only for a notification click target. Leaving it
+# blank prevents development notifications from claiming an unapproved deployment.
+TASKS_BASE_URL = os.getenv("TASKS_BASE_URL", "").strip().rstrip("/")
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
