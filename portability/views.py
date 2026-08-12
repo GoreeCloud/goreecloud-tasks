@@ -14,7 +14,8 @@ from imports.todoist import TodoistCsvError, TodoistImportAdapter
 from projects.models import Project
 
 from .exporters import build_project_archive, build_user_archive
-from .restorers import ArchiveRestoreError, restore_user_archive as restore_archive_data
+from .notification_state import restore_user_archive_with_notifications
+from .restorers import ArchiveRestoreError
 
 MAX_RESTORE_ARCHIVE_BYTES = 25 * 1024 * 1024
 MAX_PROVIDER_IMPORT_BYTES = 25 * 1024 * 1024
@@ -96,7 +97,7 @@ def restore_user_archive(request):
                 "The selected archive exceeds the 25 MiB recovery-upload limit."
             )
         payload = json.loads(raw.decode("utf-8"))
-        summary = restore_archive_data(payload, user=request.user)
+        summary = restore_user_archive_with_notifications(payload, user=request.user)
     except UnicodeDecodeError:
         return _render_index(
             request,

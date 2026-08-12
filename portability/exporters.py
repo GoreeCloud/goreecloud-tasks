@@ -8,8 +8,10 @@ from labels.models import Label
 from projects.models import Project, ProjectMembership
 from tasks.models import Task
 
+from .notification_state import attach_user_notification_state
+
 EXPORT_FORMAT = "goreecloud.tasks.export"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _iso(value):
@@ -187,7 +189,7 @@ def build_user_archive(user):
                 if account is not None:
                     users[account.pk] = _user_ref(account)
 
-    return _document(
+    document = _document(
         scope={"kind": "user_archive", "user_id": user.pk, "username": user.username},
         users=[users[key] for key in sorted(users)],
         projects=owned_projects,
@@ -196,6 +198,11 @@ def build_user_archive(user):
         tasks=tasks,
         comments=comments,
         activity=activity,
+    )
+    return attach_user_notification_state(
+        document,
+        user=user,
+        archived_task_ids=task_ids,
     )
 
 
