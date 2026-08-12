@@ -39,6 +39,16 @@ before applying the Manager-specific operational filter. Manager cannot provide 
 
 The intended deployment pattern is a dedicated Tasks integration account that is given Viewer membership only in shared projects that Manager is explicitly allowed to observe. Removing or deactivating that membership immediately removes those project tasks from future API responses. Giving the account Django staff or superuser status does not expand the normal `visible_to()` query boundary.
 
+Before deployment, validate the dedicated identity with:
+
+```bash
+python manage.py validate_manager_integration_identity \
+  --username goreecloud-manager-integration \
+  --require-membership
+```
+
+The validator is non-mutating and fails closed when the identity is interactive, privileged, owns projects or private personal tasks, or has an active membership outside the approved Viewer-only Shared-project boundary.
+
 ## Data scope
 
 Only active project-scoped tasks marked as GoreeCloud operational work are returned.
@@ -98,7 +108,9 @@ Successful responses and authentication/configuration failures use `Cache-Contro
 
 This API is not a general public API and does not authorize Manager to modify Tasks data. It does not create user accounts, assign memberships, change tasks, complete work, post comments, alter reminders, or execute GoreeCloud infrastructure actions.
 
-The bearer token is a reusable secret and must not be committed to Git, stored in task data, exposed in logs, or returned in API responses. Long-lived deployment should use the approved protected secret-file mechanism. Token rotation and production provisioning remain deployment responsibilities.
+The bearer token is a reusable secret and must not be committed to Git, stored in task data, exposed in logs, or returned in API responses. Long-lived deployment should use the approved protected secret-file mechanism.
+
+The complete service-identity and bearer-token procedure is documented in [`manager-integration-credential-lifecycle.md`](manager-integration-credential-lifecycle.md). That procedure defines the planned non-human identity posture, Viewer-only project authorization, protected runtime source, Vaultwarden recovery record, rotation, emergency revocation, recovery, and retirement controls without creating or authorizing production credentials.
 
 Transport security and network reachability remain separate deployment controls. A future production connection should use the approved private GoreeCloud service-publication and networking architecture rather than direct public backend exposure.
 
@@ -115,5 +127,7 @@ Regression coverage verifies that:
 - membership revocation removes future visibility;
 - staff/superuser flags do not expand the integration scope; and
 - the endpoint remains GET-only.
+
+Identity-lifecycle regression coverage additionally verifies that the dedicated service identity can be validated as non-interactive and Viewer-only before activation.
 
 GoreeCloud Manager must independently validate the response schema and normalize only the fields it needs for display. A successful application-level integration test does not by itself approve production credentials, private publication, DNS/Caddy changes, or production deployment.
