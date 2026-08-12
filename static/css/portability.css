@@ -36,6 +36,68 @@
   gap: 14px;
 }
 
+.status-banner {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  background: #161b22;
+}
+
+.error-banner {
+  border-color: #f85149;
+}
+
+.success-banner {
+  border-color: #3fb950;
+}
+
+.recovery-note {
+  padding: 14px;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  background: #0d1117;
+}
+
+.recovery-note p {
+  margin: 6px 0 0;
+}
+
+.restore-form {
+  display: grid;
+  gap: 14px;
+}
+
+.file-field,
+.confirm-field {
+  display: grid;
+  gap: 8px;
+}
+
+.file-field > span {
+  font-weight: 650;
+}
+
+.file-field input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+.confirm-field {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+
+.confirm-field input {
+  margin-top: 3px;
+}
+
 .button {
   display: inline-flex;
   width: fit-content;
@@ -43,10 +105,13 @@
   justify-content: center;
   min-height: 40px;
   padding: 9px 14px;
+  border: 0;
   border-radius: 8px;
   background: #238636;
   color: #ffffff;
+  font: inherit;
   font-weight: 650;
+  cursor: pointer;
 }
 
 .simple-list {
