@@ -8,30 +8,60 @@ from django.views.decorators.http import require_POST
 
 from tasks.models import Task
 
-from .forms import NotificationPreferenceForm, TaskReminderForm
+from .forms import NotificationPreferenceForm, ReminderCreateForm, TaskReminderForm
 from .models import TaskReminder
-from .services import get_preferences, ntfy_is_configured
+from .services import default_reminder_time, get_preferences, ntfy_is_configured
 
 
 @login_required
 def settings_view(request):
     """Manage one user's reminder defaults without exposing ntfy credentials."""
     preference = get_preferences(request.user)
+    form = NotificationPreferenceForm(instance=preference, user=request.user)
+    reminder_form = ReminderCreateForm(user=request.user)
+
     if request.method == "POST":
-        form = NotificationPreferenceForm(
-            request.POST,
-            instance=preference,
-            user=request.user,
-        )
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Notification preferences updated.")
-            return redirect("notifications:settings")
+        action = request.POST.get("action", "preferences")
+        if action == "create_reminder":
+            reminder_form = ReminderCreateForm(request.POST, user=request.user)
+            if not preference.reminders_enabled:
+                reminder_form.add_error(
+                    None,
+                    "Task reminders are disabled in your notification preferences.",
+                )
+            elif reminder_form.is_valid():
+                reminder_form.save()
+                messages.success(request, "Private reminder scheduled.")
+                return redirect("notifications:settings")
+        else:
+            form = NotificationPreferenceForm(
+                request.POST,
+                instance=preference,
+                user=request.user,
+            )
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Notification preferences updated.")
+                return redirect("notifications:settings")
     else:
-        form = NotificationPreferenceForm(
-            instance=preference,
-            user=request.user,
-        )
+        requested_task = request.GET.get("task", "").strip()
+        if requested_task:
+            task = (
+                Task.objects.visible_to(request.user)
+                .exclude(status__in=[Task.Status.COMPLETED, Task.Status.CANCELLED])
+                .filter(pk=requested_task)
+                .first()
+            )
+            if task is not None:
+                reminder_form = ReminderCreateForm(
+                    user=request.user,
+                    initial={
+                        "task": task,
+                        "remind_at": timezone.localtime(
+                            default_reminder_time(user=request.user, task=task)
+                        ),
+                    },
+                )
 
     visible_task_ids = Task.objects.visible_to(request.user).values_list("pk", flat=True)
     active_reminders = (
@@ -50,6 +80,7 @@ def settings_view(request):
         "notifications/settings.html",
         {
             "form": form,
+            "reminder_form": reminder_form,
             "preference": preference,
             "active_reminders": active_reminders,
             "ntfy_configured": ntfy_is_configured(),
