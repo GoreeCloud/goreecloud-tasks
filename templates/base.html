@@ -10,12 +10,14 @@
   <link rel="stylesheet" href="{% static 'css/collaboration.css' %}">
   <link rel="stylesheet" href="{% static 'css/task-organization.css' %}">
   <link rel="stylesheet" href="{% static 'css/portability.css' %}">
+  <link rel="stylesheet" href="{% static 'css/notifications.css' %}">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="{% url 'tasks:dashboard' %}">GoreeCloud Tasks</a>
     {% if user.is_authenticated %}
       <div class="account">
+        <a class="secondary-link" href="{% url 'notifications:settings' %}">Notifications</a>
         <a class="secondary-link" href="{% url 'portability:index' %}">Data</a>
         <span>{{ user.preferred_name }}</span>
         <form method="post" action="{% url 'logout' %}">
