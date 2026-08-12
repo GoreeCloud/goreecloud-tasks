@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel">
+    <header class="panel-heading project-detail-heading">
+      <div>
+        <p class="eyebrow">{{ project.get_visibility_display }} project</p>
+        <h1>{{ project.name }}</h1>
+      </div>
+      <div class="heading-actions">
+        {% if user_can_edit_tasks %}
+          <a class="primary-button compact" href="{% url 'tasks:task_create' %}?project={{ project.pk }}">New task</a>
+        {% endif %}
+        {% if user_is_owner %}
+          <a class="secondary-button" href="{% url 'projects:edit' project.pk %}">Project settings</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <div class="project-summary">
+      <div>
+        <span class="summary-label">Owner</span>
+        <strong>{{ project.owner.preferred_name }}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Visibility</span>
+        <strong>{{ project.get_visibility_display }}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Open tasks</span>
+        <strong>{{ task_count }}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Your access</span>
+        <strong>{% if user_is_owner %}Owner{% elif user_can_edit_tasks %}Edit{% else %}Read only{% endif %}</strong>
+      </div>
+    </div>
+
+    <section class="project-section" aria-labelledby="project-tasks-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Work</p>
+          <h2 id="project-tasks-heading">Open tasks</h2>
+        </div>
+        <span class="count">{{ task_count }}</span>
+      </div>
+
+      {% if tasks %}
+        <ul class="task-list">
+          {% for task in tasks %}
+            <li class="task-row">
+              {% if task.user_can_edit %}
+                <form class="complete-form" method="post" action="{% url 'tasks:task_toggle_complete' task.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button class="complete-button" type="submit" aria-label="Complete {{ task.title }}">✓</button>
+                </form>
+              {% else %}
+                <span class="complete-button read-only-indicator" aria-hidden="true"></span>
+              {% endif %}
+              <div class="task-content">
+                <div class="task-title-line">
+                  {% if task.user_can_edit %}
+                    <a class="task-title" href="{% url 'tasks:task_edit' task.pk %}">{{ task.title }}</a>
+                  {% else %}
+                    <strong class="task-title">{{ task.title }}</strong>
+                    <span class="read-only-badge">Read only</span>
+                  {% endif %}
+                </div>
+                {% if task.description %}
+                  <p class="task-description">{{ task.description|truncatechars:160 }}</p>
+                {% endif %}
+                <div class="task-meta">
+                  {{ task.get_priority_display }} · {{ task.get_status_display }}
+                  {% if task.assignee %} · Assigned to {{ task.assignee.preferred_name }}{% endif %}
+                  {% if task.due_at %} · Due {{ task.due_at|date:"M j, Y g:i A" }}{% endif %}
+                </div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="empty-state compact-empty-state">
+          <h2>No open tasks.</h2>
+          <p>{% if user_can_edit_tasks %}Create a task when this project has work to track.{% else %}There is no open work visible in this project.{% endif %}</p>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="project-section" aria-labelledby="project-members-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Sharing</p>
+          <h2 id="project-members-heading">Project members</h2>
+        </div>
+      </div>
+
+      <div class="member-list">
+        <div class="member-row owner-row">
+          <div>
+            <strong>{{ project.owner.preferred_name }}</strong>
+            <span>@{{ project.owner.username }}</span>
+          </div>
+          <span class="role-badge">Owner</span>
+        </div>
+
+        {% for membership in memberships %}
+          <div class="member-row">
+            <div>
+              <strong>{{ membership.user.preferred_name }}</strong>
+              <span>@{{ membership.user.username }}</span>
+            </div>
+            {% if user_is_owner %}
+              <div class="member-actions">
+                <form method="post" action="{% url 'projects:membership_role_update' project.pk membership.pk %}">
+                  {% csrf_token %}
+                  <label class="sr-only" for="role-{{ membership.pk }}">Role for {{ membership.user.preferred_name }}</label>
+                  <select id="role-{{ membership.pk }}" name="role">
+                    {% for value, label in membership.Role.choices %}
+                      <option value="{{ value }}"{% if membership.role == value %} selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="secondary-button compact-control" type="submit">Update</button>
+                </form>
+                <form method="post" action="{% url 'projects:membership_remove' project.pk membership.pk %}">
+                  {% csrf_token %}
+                  <button class="danger-button compact-control" type="submit">Remove</button>
+                </form>
+              </div>
+            {% else %}
+              <span class="role-badge">{{ membership.get_role_display }}</span>
+            {% endif %}
+          </div>
+        {% empty %}
+          {% if project.visibility == 'shared' %}
+            <p class="muted-copy">No collaborators have been added yet.</p>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if user_is_owner %}
+        {% if project.visibility == 'shared' %}
+          <form class="membership-add-form" method="post" action="{% url 'projects:membership_add' project.pk %}">
+            {% csrf_token %}
+            {{ membership_form.non_field_errors }}
+            <label class="field-group">
+              <span>Add by username</span>
+              {{ membership_form.username }}
+              {{ membership_form.username.errors }}
+              <small>{{ membership_form.username.help_text }}</small>
+            </label>
+            <label class="field-group">
+              <span>Role</span>
+              {{ membership_form.role }}
+              {{ membership_form.role.errors }}
+            </label>
+            <button class="primary-button compact" type="submit">Add member</button>
+          </form>
+        {% else %}
+          <div class="privacy-warning">
+            This project is private. Change its visibility to Shared before adding collaborators; sharing is never enabled automatically.
+          </div>
+        {% endif %}
+      {% endif %}
+    </section>
+  </section>
+</div>
+{% endblock %}
