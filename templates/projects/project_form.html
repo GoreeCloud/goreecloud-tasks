@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{% if project %}Edit {{ project.name }}{% else %}New Project{% endif %} — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow">Project settings</p>
+        <h1>{% if project %}Edit project{% else %}New project{% endif %}</h1>
+      </div>
+      {% if project %}
+        <a class="secondary-link" href="{% url 'projects:detail' project.pk %}">Back to project</a>
+      {% else %}
+        <a class="secondary-link" href="{% url 'projects:list' %}">Back to projects</a>
+      {% endif %}
+    </header>
+
+    <form class="task-editor" method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      <label class="field-group">
+        <span>Name</span>
+        {{ form.name }}
+        {{ form.name.errors }}
+      </label>
+
+      <label class="field-group">
+        <span>Visibility</span>
+        {{ form.visibility }}
+        {{ form.visibility.errors }}
+        <small>Private projects are visible only to the owner. Shared projects remain inaccessible until the owner explicitly adds members.</small>
+      </label>
+
+      {% if project and project.visibility == 'shared' %}
+        <div class="privacy-warning">
+          Changing this project to Private will revoke all active memberships. Membership history is retained, but collaborators will lose future access immediately.
+        </div>
+      {% endif %}
+
+      <div class="editor-actions">
+        <button class="primary-button compact" type="submit">{% if project %}Save settings{% else %}Create project{% endif %}</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
