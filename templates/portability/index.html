@@ -8,85 +8,64 @@
     <div>
       <p class="eyebrow">Data ownership</p>
       <h1>Data portability</h1>
-      <p>Download application-owned task data and restore a complete user archive through guarded recovery controls.</p>
+      <p>Download application-owned task data, migrate a Todoist project, or restore a complete user archive through guarded controls.</p>
     </div>
   </div>
 
   {% if restore_error %}
-    <div class="status-banner error-banner" role="alert">
-      <strong>Restore blocked.</strong>
-      <span>{{ restore_error }}</span>
-    </div>
+    <div class="status-banner error-banner" role="alert"><strong>Restore blocked.</strong><span>{{ restore_error }}</span></div>
   {% endif %}
-
   {% if restore_summary %}
     <div class="status-banner success-banner" role="status">
       <strong>Archive restored.</strong>
-      <span>
-        {{ restore_summary.projects_restored }} project{{ restore_summary.projects_restored|pluralize }},
-        {{ restore_summary.memberships_restored }} membership{{ restore_summary.memberships_restored|pluralize }},
-        {{ restore_summary.labels_restored }} label{{ restore_summary.labels_restored|pluralize }},
-        {{ restore_summary.tasks_restored }} task{{ restore_summary.tasks_restored|pluralize }},
-        {{ restore_summary.comments_restored }} comment{{ restore_summary.comments_restored|pluralize }}, and
-        {{ restore_summary.activity_events_restored }} activity event{{ restore_summary.activity_events_restored|pluralize }} restored.
-      </span>
+      <span>{{ restore_summary.projects_restored }} project{{ restore_summary.projects_restored|pluralize }}, {{ restore_summary.memberships_restored }} membership{{ restore_summary.memberships_restored|pluralize }}, {{ restore_summary.labels_restored }} label{{ restore_summary.labels_restored|pluralize }}, {{ restore_summary.tasks_restored }} task{{ restore_summary.tasks_restored|pluralize }}, {{ restore_summary.comments_restored }} comment{{ restore_summary.comments_restored|pluralize }}, and {{ restore_summary.activity_events_restored }} activity event{{ restore_summary.activity_events_restored|pluralize }} restored.</span>
+    </div>
+  {% endif %}
+  {% if todoist_error %}
+    <div class="status-banner error-banner" role="alert"><strong>Todoist import blocked.</strong><span>{{ todoist_error }}</span></div>
+  {% endif %}
+  {% if todoist_summary %}
+    <div class="status-banner success-banner" role="status">
+      <strong>Todoist project imported.</strong>
+      <span>{{ todoist_project_name }}: {{ todoist_summary.tasks_created }} task{{ todoist_summary.tasks_created|pluralize }}, {{ todoist_summary.labels_created }} label{{ todoist_summary.labels_created|pluralize }}, and {{ todoist_summary.comments_created }} comment{{ todoist_summary.comments_created|pluralize }} imported into a new private project.</span>
     </div>
   {% endif %}
 
   <section class="panel stack-gap">
-    <div>
-      <h2>My archive</h2>
-      <p>Includes your private personal tasks and labels plus projects you own and the records contained by those projects. Projects owned by another user are not bulk-exported through this archive even when you can view them.</p>
-    </div>
+    <div><h2>My archive</h2><p>Includes your private personal tasks and labels plus projects you own and the records contained by those projects. Projects owned by another user are not bulk-exported through this archive even when you can view them.</p></div>
     <a class="button" href="{% url 'portability:user_export' %}">Download my JSON archive</a>
   </section>
 
   <section class="panel stack-gap">
-    <div>
-      <h2>Restore my archive</h2>
-      <p>This recovery path restores a complete GoreeCloud Tasks user archive without overwriting or merging existing owned Tasks data. The archive username must exactly match your account, and every archived collaborator username must already exist locally.</p>
-    </div>
+    <div><h2>Import a Todoist project</h2><p>Upload one Todoist project CSV. GoreeCloud Tasks creates a new private project, imports tasks and subtasks, converts Todoist label tokens into project labels, and imports note rows as comments.</p></div>
     <div class="recovery-note">
-      <strong>Recovery boundary</strong>
-      <p>Restoration is allowed only when your account has no existing owned Tasks projects, personal labels, or private personal tasks. This prevents accidental duplicate or destructive merges. User accounts are never created from an archive.</p>
+      <strong>Migration boundary</strong>
+      <p>Todoist author and assignee text is preserved as source metadata; it never creates or assigns GoreeCloud accounts. Natural-language or recurring dates, deadlines, durations, sections, and unsupported columns are preserved in task metadata rather than guessed into unsupported native fields.</p>
     </div>
+    <form class="restore-form" method="post" action="{% url 'portability:import_todoist_csv' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label class="file-field"><span>New private project name</span><input type="text" name="project_name" maxlength="200" required></label>
+      <label class="file-field"><span>Todoist project CSV</span><input type="file" name="todoist_csv" accept="text/csv,.csv" required></label>
+      <button class="button" type="submit">Validate and import Todoist CSV</button>
+    </form>
+  </section>
+
+  <section class="panel stack-gap">
+    <div><h2>Restore my archive</h2><p>This recovery path restores a complete GoreeCloud Tasks user archive without overwriting or merging existing owned Tasks data. The archive username must exactly match your account, and every archived collaborator username must already exist locally.</p></div>
+    <div class="recovery-note"><strong>Recovery boundary</strong><p>Restoration is allowed only when your account has no existing owned Tasks projects, personal labels, or private personal tasks. User accounts are never created from an archive.</p></div>
     <form class="restore-form" method="post" action="{% url 'portability:restore_user_archive' %}" enctype="multipart/form-data">
       {% csrf_token %}
-      <label class="file-field">
-        <span>GoreeCloud Tasks user archive</span>
-        <input type="file" name="archive" accept="application/json,.json" required>
-      </label>
-      <label class="confirm-field">
-        <input type="checkbox" name="confirm_restore" value="yes" required>
-        <span>I understand that this is a recovery operation for a clean account-owned Tasks data set and that existing data will not be merged or overwritten.</span>
-      </label>
+      <label class="file-field"><span>GoreeCloud Tasks user archive</span><input type="file" name="archive" accept="application/json,.json" required></label>
+      <label class="confirm-field"><input type="checkbox" name="confirm_restore" value="yes" required><span>I understand that this is a recovery operation for a clean account-owned Tasks data set and that existing data will not be merged or overwritten.</span></label>
       <button class="button" type="submit">Validate and restore archive</button>
     </form>
   </section>
 
   <section class="panel stack-gap">
-    <div>
-      <h2>Projects I own</h2>
-      <p>Project exports include project tasks, labels, memberships, comments, and attributable activity.</p>
-    </div>
+    <div><h2>Projects I own</h2><p>Project exports include project tasks, labels, memberships, comments, and attributable activity.</p></div>
     {% if owned_projects %}
-      <ul class="simple-list">
-        {% for project in owned_projects %}
-          <li>
-            <span>{{ project.name }}</span>
-            <a href="{% url 'portability:project_export' project.pk %}">Download JSON</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="muted">You do not own any projects yet.</p>
-    {% endif %}
-  </section>
-
-  <section class="panel stack-gap">
-    <h2>External import status</h2>
-    <p>The source-neutral import executor now validates provider-normalized projects, labels, tasks, subtasks, priorities, statuses, due times, and relationship scopes before an atomic database write. External imports create private data owned by the importing user and cannot create accounts, memberships, or shared projects.</p>
-    <p>Todoist mapping is still disabled. GoreeCloud Tasks will not claim compatibility until the selected Todoist export format is verified and covered by migration tests.</p>
+      <ul class="simple-list">{% for project in owned_projects %}<li><span>{{ project.name }}</span><a href="{% url 'portability:project_export' project.pk %}">Download JSON</a></li>{% endfor %}</ul>
+    {% else %}<p class="muted">You do not own any projects yet.</p>{% endif %}
   </section>
 </section>
 {% endblock %}
