@@ -23,14 +23,48 @@
       {% csrf_token %}
       {{ form.non_field_errors }}
 
-      {% for field in form %}
-        <label class="field-group" for="{{ field.id_for_label }}">
-          <span>{{ field.label }}</span>
-          {{ field }}
-          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-          {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
-        </label>
-      {% endfor %}
+      <div class="editor-section">
+        <div class="section-heading compact-heading">
+          <div>
+            <p class="eyebrow">Core task</p>
+            <h2>Task details</h2>
+          </div>
+        </div>
+
+        {% for field in form %}
+          {% if field.name == 'title' or field.name == 'description' or field.name == 'project' or field.name == 'assignee' or field.name == 'priority' or field.name == 'status' or field.name == 'due_at' or field.name == 'labels' %}
+            <label class="field-group{% if field.name == 'labels' %} checkbox-field-group{% endif %}" for="{{ field.id_for_label }}">
+              <span>{{ field.label }}</span>
+              {{ field }}
+              {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+              {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+            </label>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <details class="operational-editor"{% if operational_open %} open{% endif %}>
+        <summary>
+          <span>GoreeCloud operational metadata</span>
+          <small>Optional for ordinary personal, family, and collaborative tasks</small>
+        </summary>
+        <div class="operational-fields">
+          {% for field in form %}
+            {% if field.name == 'is_goreecloud_work' or field.name == 'assigned_system' or field.name == 'assigned_service' or field.name == 'environment' or field.name == 'workload_category' or field.name == 'blocker' or field.name == 'resume_condition' or field.name == 'backup_prerequisite' or field.name == 'recovery_requirement' or field.name == 'validation_requirement' or field.name == 'documentation_requirement' or field.name == 'related_change_record' or field.name == 'related_documentation' %}
+              <label class="field-group{% if field.field.widget.input_type == 'checkbox' %} inline-checkbox{% endif %}" for="{{ field.id_for_label }}">
+                {% if field.field.widget.input_type == 'checkbox' %}
+                  <span class="checkbox-line">{{ field }} <strong>{{ field.label }}</strong></span>
+                {% else %}
+                  <span>{{ field.label }}</span>
+                  {{ field }}
+                {% endif %}
+                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+              </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </details>
 
       <div class="editor-actions">
         <button class="primary-button" type="submit">{% if task %}Save changes{% else %}Create task{% endif %}</button>
@@ -41,7 +75,7 @@
       <div class="danger-zone">
         <div>
           <strong>Delete task</strong>
-          <p>This permanently removes this task from GoreeCloud Tasks. Material project activity remains attributable after deletion.</p>
+          <p>This permanently removes this task and its subtasks from GoreeCloud Tasks. Material project activity remains attributable after deletion.</p>
         </div>
         <form method="post" action="{% url 'tasks:task_delete' task.pk %}">
           {% csrf_token %}

@@ -8,10 +8,10 @@ family, collaborative, and GoreeCloud operational work.
 **v0.1 development. Production deployment is not yet approved.**
 
 The current implementation establishes the multi-user security boundary, usable
-task workflows, project and membership management, and attributable task
-comments and material activity history. Production publication remains blocked
-on the broader v0.1 acceptance requirements, including backup and restoration
-testing.
+task and project workflows, explicit collaboration, labels, subtasks, scoped
+search, and the first GoreeCloud operational metadata. Production publication
+remains blocked on the broader v0.1 acceptance requirements, including backup
+and restoration testing.
 
 ## Implemented Foundation
 
@@ -23,7 +23,7 @@ testing.
 - Project Manager, Member, and Viewer roles.
 - Membership revocation without deleting membership history.
 - Automatic membership revocation when a shared project becomes private.
-- Authorization-aware task query helpers for read and edit access.
+- Authorization-aware task and label query helpers for read and edit access.
 - Server-side mutation checks that prevent ordinary users from editing work they
   are not authorized to change.
 - Historical task creator and assignee retention after project access is revoked,
@@ -31,16 +31,25 @@ testing.
 - GoreeCloud P0 through P4 priorities with lifecycle status kept separate.
 - Task creation through Quick Add and the full task editor.
 - Task editing, completion, reopening, and deletion.
-- Inbox, Today, and Upcoming views.
+- Inbox, Today, Upcoming, and authorization-scoped Search views.
 - Project-aware Quick Add limited to projects the current user may edit.
 - Project-aware full task creation with authorized project preselection.
+- Personal and project-scoped labels with server-side scope enforcement.
+- Subtasks implemented as normal task records inside the parent's authorization
+  scope.
+- Initial GoreeCloud operational metadata for systems, services, environments,
+  workload categories, blockers, resume conditions, operational prerequisites,
+  and related records.
 - Read-only presentation for tasks visible through Viewer membership.
-- Authorized task detail pages with task-scoped comments and activity.
+- Authorized task detail pages with labels, subtasks, comments, activity, and
+  optional operational metadata.
 - User-attributed comments for users with task edit access.
 - Material task and project activity events with the acting user recorded.
 - Project activity history for sharing and membership changes.
-- Django admin limited to account administration; private task/project content
-  is not registered there.
+- Data-minimized task edit history that records changed field keys instead of
+  duplicating task descriptions, label names, blockers, or related-record text.
+- Django admin limited to account administration; private task/project/label
+  content is not registered there.
 - PostgreSQL-ready application configuration with SQLite for isolated tests.
 - File-based secret support for the non-root application container.
 - Dockerfile and Docker Compose development stack.
@@ -134,18 +143,80 @@ After signing in, the application provides:
 - **Inbox** for active private personal tasks.
 - **Today** for active accessible tasks due on the current GoreeCloud local date.
 - **Upcoming** for active accessible tasks due after the current local date.
+- **Search** across accessible active and completed task content, project names,
+  labels, and the implemented GoreeCloud operational fields.
 - **Quick Add** for low-friction capture into Inbox or an editable project.
-- **Full editor** for title, description, project, assignee, priority, status, and
-  optional due date/time.
+- **Full editor** for title, description, project, assignee, priority, status,
+  due date/time, labels, and optional GoreeCloud operational metadata.
 - **Completion controls** for completing and reopening editable tasks.
-- **Task detail** for authorized readers, with discussion and activity history.
+- **Task detail** for authorized readers, with labels, subtasks, discussion,
+  operational metadata when relevant, and activity history.
 
 Shared-project Viewer membership remains read-only. Manager and Member roles may
 modify shared project work according to the project authorization boundary.
 
+## Labels
+
+Labels are deliberately scoped instead of being globally shared across the
+installation:
+
+- **Personal labels** belong to one user and remain private to that user's
+  personal task context.
+- **Project labels** belong to one project and are visible only to users who can
+  already read that project.
+- Project Managers and Members can create project labels; Viewers remain
+  read-only.
+- Task forms expose only labels valid for the selected task scope.
+- Labels that are still assigned to tasks cannot be deleted, preventing one
+  label-management action from silently rewriting many task records.
+
+## Subtasks
+
+Subtasks use the same Task model and authorization engine as ordinary tasks.
+Creation requires edit permission on the parent task. The new subtask inherits
+the parent's project scope, and the model rejects cross-project, cross-user
+private, self-parent, and cyclic relationships.
+
+Because a subtask remains a normal task record, it can use the existing task
+detail, completion, comment, activity, label, scheduling, and assignment
+workflows.
+
+## Search
+
+Search begins with `Task.objects.visible_to(user)` and only then applies the
+search expression. It therefore cannot be used to enumerate another user's
+private task content or a project that the current user cannot access.
+
+The initial search covers task title and description, project and label names,
+creator/assignee usernames, assigned system and service, environment, workload
+category, blocker, resume condition, and related change/document references.
+Completed and cancelled accessible tasks remain searchable for later retrieval.
+
+## GoreeCloud Operational Metadata
+
+Ordinary personal, family, and collaborative tasks can leave all operational
+fields empty. When a task represents GoreeCloud work, the optional advanced
+section can record:
+
+- assigned system;
+- assigned service;
+- environment or virtual machine;
+- workload category;
+- blocker;
+- resume condition;
+- backup prerequisite;
+- recovery requirement;
+- validation requirement;
+- documentation requirement;
+- related change record; and
+- related GoreeCloud documentation.
+
+The operational editor is separated from the core task form so infrastructure
+terminology does not slow ordinary task capture.
+
 ## Project Workflows
 
-The Projects area now provides:
+The Projects area provides:
 
 - **Project list** containing only projects the current user owns or may access
   through an active explicit membership.
@@ -164,7 +235,7 @@ The Projects area now provides:
 
 Membership revocation removes future project visibility and edit authorization.
 Existing tasks may retain a removed collaborator as their historical creator or
-assignee so that ordinary task updates and completion do not fail after access is
+assignee so ordinary task updates and completion do not fail after access is
 revoked. New assignments still require the project owner or an active member.
 
 ## Comments and Activity
@@ -181,16 +252,15 @@ Collaboration is deliberately scoped to content the user can already access:
   task events.
 - **Material history only** is recorded; page views and low-value interaction
   telemetry are not written to the activity stream.
-- **Sensitive-data minimization** keeps task descriptions and comment bodies out
-  of activity metadata. Edit events store changed field names rather than copies
-  of field content.
+- **Sensitive-data minimization** keeps task descriptions, comment bodies, label
+  names, blockers, and operational field content out of edit-event metadata.
 - **Access revocation applies to history**. A removed project member loses future
   access to the project's task comments and activity along with the underlying
   project/task content.
 
 The v0.1 interface creates comments but does not yet provide comment edit/delete
-controls. Activity events are presented as attributable history, not as a
-general-purpose analytics or surveillance log.
+controls. Activity events are attributable history, not a general-purpose
+analytics or surveillance log.
 
 ## Tests
 
@@ -209,7 +279,11 @@ Quick Add authorization, task mutation authorization, Today/Upcoming visibility,
 project-list boundaries, owner-only project settings, explicit sharing, role
 changes, membership revocation, historical task behavior after access is
 revoked, comment authorization, comment output escaping, activity attribution,
-project-history visibility, and history isolation after access revocation.
+project-history visibility, history isolation after access revocation, personal
+and project-label boundaries, invalid cross-scope labels, protected used-label
+deletion, subtask authorization and scope, search isolation, completed-task
+retrieval, optional operational metadata, and data-minimized label-change
+activity.
 
 GitHub Actions additionally builds and starts the Docker Compose development
 stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
@@ -221,12 +295,13 @@ goreecloud-tasks/
 ├── goreecloud_tasks/   # Django project configuration
 ├── accounts/           # Individual user identity and preferences
 ├── projects/           # Project ownership, memberships, roles, forms, and views
-├── tasks/              # Core task models, forms, views, and authorization
+├── labels/             # Personal/project label scope and management
+├── tasks/              # Core task models, forms, views, search, and authorization
 ├── collaboration/      # Task comments and attributable material activity
 ├── templates/          # Server-rendered application templates
 ├── static/             # CSS and future client-side assets
 ├── tests/              # Functional and authorization tests
-├── docs/               # Architecture and operating documentation
+├── docs/               # Architecture, feature, and operating documentation
 ├── .github/workflows/  # Continuous integration
 ├── compose.yml
 ├── Dockerfile
@@ -235,9 +310,9 @@ goreecloud-tasks/
 └── manage.py
 ```
 
-Additional capabilities such as labels, subtasks, search, imports, integrations,
-reminders, and the public application API will be introduced only when their
-milestone requires them.
+Remaining milestone work includes portable export/import foundations,
+notifications and reminders, additional GoreeCloud operational relationships,
+integrations, and the public application API when those milestones require them.
 
 ## Production Boundary
 

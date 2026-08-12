@@ -1,8 +1,13 @@
 <nav class="sidebar" aria-label="Task navigation">
+  <form class="sidebar-search" method="get" action="{% url 'tasks:search' %}" role="search">
+    <label class="sr-only" for="sidebar-search-query">Search tasks</label>
+    <input id="sidebar-search-query" name="q" type="search" value="{{ search_query|default:'' }}" placeholder="Search tasks" autocomplete="off">
+  </form>
   <a class="nav-item{% if active_view == 'inbox' %} active{% endif %}" href="{% url 'tasks:dashboard' %}">Inbox</a>
   <a class="nav-item{% if active_view == 'today' %} active{% endif %}" href="{% url 'tasks:today' %}">Today</a>
   <a class="nav-item{% if active_view == 'upcoming' %} active{% endif %}" href="{% url 'tasks:upcoming' %}">Upcoming</a>
   <a class="nav-item{% if active_view == 'projects' %} active{% endif %}" href="{% url 'projects:list' %}">Projects</a>
+  <a class="nav-item{% if active_view == 'labels' %} active{% endif %}" href="{% url 'labels:list' %}">Labels</a>
   <span class="nav-item planned">Shared Work <small>planned</small></span>
   <span class="nav-item planned">GoreeCloud Work <small>planned</small></span>
 </nav>

@@ -40,8 +40,14 @@
               {% if task.description %}
                 <p class="task-description">{{ task.description|truncatechars:160 }}</p>
               {% endif %}
+              {% if task.labels.all %}
+                <div class="label-chip-row">
+                  {% for label in task.labels.all %}<span class="label-chip">{{ label.name }}</span>{% endfor %}
+                </div>
+              {% endif %}
               <div class="task-meta">
                 {{ task.get_priority_display }} · {{ task.get_status_display }}
+                {% if task.parent %} · Subtask of {{ task.parent.title }}{% endif %}
                 {% if task.project %} · {{ task.project.name }}{% endif %}
                 {% if task.assignee %} · Assigned to {{ task.assignee.preferred_name }}{% endif %}
                 {% if task.due_at %} · Due {{ task.due_at|date:"M j, Y g:i A" }}{% endif %}
@@ -52,8 +58,8 @@
       </ul>
     {% else %}
       <div class="empty-state">
-        <h2>No tasks here.</h2>
-        <p>Use Quick Add above to capture work without leaving this view.</p>
+        <h2>{{ empty_heading }}</h2>
+        <p>{{ empty_copy }}</p>
       </div>
     {% endif %}
   </section>
