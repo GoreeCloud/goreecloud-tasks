@@ -9,9 +9,9 @@ family, collaborative, and GoreeCloud operational work.
 
 The current implementation establishes the multi-user security boundary, usable
 task and project workflows, explicit collaboration, labels, subtasks, scoped
-search, and the first GoreeCloud operational metadata. Production publication
-remains blocked on the broader v0.1 acceptance requirements, including backup
-and restoration testing.
+search, the first GoreeCloud operational metadata, and an authorization-aware
+portable JSON export foundation. Production publication remains blocked on the
+broader v0.1 acceptance requirements, including backup and restoration testing.
 
 ## Implemented Foundation
 
@@ -48,6 +48,12 @@ and restoration testing.
 - Project activity history for sharing and membership changes.
 - Data-minimized task edit history that records changed field keys instead of
   duplicating task descriptions, label names, blockers, or related-record text.
+- Versioned, authenticated JSON exports for user-owned data and owner-only
+  project archives.
+- Export scope that does not turn ordinary shared-project visibility into a
+  bulk-export permission over another user's project.
+- Source-neutral external-import records plus a Todoist adapter boundary that
+  does not claim support for an unverified provider export format.
 - Django admin limited to account administration; private task/project/label
   content is not registered there.
 - PostgreSQL-ready application configuration with SQLite for isolated tests.
@@ -262,6 +268,30 @@ The v0.1 interface creates comments but does not yet provide comment edit/delete
 controls. Activity events are attributable history, not a general-purpose
 analytics or surveillance log.
 
+## Data Portability
+
+Authenticated users can open the Data area and download a machine-readable JSON
+archive using the versioned `goreecloud.tasks.export` format. The current schema
+version is `1`.
+
+A user archive contains that user's private personal tasks and labels plus
+projects the user owns and the application-owned records contained by those
+projects. Projects owned by another user are excluded even when the exporter has
+active shared-project access. This prevents normal collaboration permissions
+from silently becoming bulk-export permissions.
+
+Project archives are owner-only in v0.1. They preserve the selected project's
+memberships, labels, tasks, task relationships, comments, activity history,
+timestamps, and implemented GoreeCloud operational metadata. Compact user
+references include only local user IDs and usernames; exports do not include
+email addresses, password data, sessions, authentication tokens, or unrelated
+account fields. Downloads are served as private, non-cacheable attachments.
+
+The `imports` package now provides a provider-independent normalization layer for
+future migrations. A Todoist adapter boundary exists, but it intentionally does
+not parse or claim support for a provider export format that has not yet been
+verified and covered by migration tests.
+
 ## Tests
 
 Run the local checks with:
@@ -282,8 +312,10 @@ revoked, comment authorization, comment output escaping, activity attribution,
 project-history visibility, history isolation after access revocation, personal
 and project-label boundaries, invalid cross-scope labels, protected used-label
 deletion, subtask authorization and scope, search isolation, completed-task
-retrieval, optional operational metadata, and data-minimized label-change
-activity.
+retrieval, optional operational metadata, data-minimized label-change activity,
+versioned export behavior, user/archive scope isolation, owner-only project
+export, relationship and operational-field preservation, sensitive account-field
+omission, and the non-claiming external-import adapter boundary.
 
 GitHub Actions additionally builds and starts the Docker Compose development
 stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
@@ -298,6 +330,8 @@ goreecloud-tasks/
 ├── labels/             # Personal/project label scope and management
 ├── tasks/              # Core task models, forms, views, search, and authorization
 ├── collaboration/      # Task comments and attributable material activity
+├── portability/        # Versioned, authorization-scoped export workflows
+├── imports/            # Source-neutral migration records and provider adapters
 ├── templates/          # Server-rendered application templates
 ├── static/             # CSS and future client-side assets
 ├── tests/              # Functional and authorization tests
@@ -310,9 +344,10 @@ goreecloud-tasks/
 └── manage.py
 ```
 
-Remaining milestone work includes portable export/import foundations,
-notifications and reminders, additional GoreeCloud operational relationships,
-integrations, and the public application API when those milestones require them.
+Remaining milestone work includes safe import/restoration execution, verified
+Todoist mapping, notifications and reminders, additional GoreeCloud operational
+relationships, integrations, and the public application API when those milestones
+require them.
 
 ## Production Boundary
 
