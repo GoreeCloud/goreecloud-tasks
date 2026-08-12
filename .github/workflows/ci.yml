@@ -98,6 +98,26 @@ jobs:
           MANAGER_PYTHON: ${{ github.workspace }}/.venv-manager/bin/python
         run: bash scripts/validate_manager_cross_app.sh
 
+  manager-final-topology:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out GoreeCloud Tasks
+        uses: actions/checkout@v6
+
+      - name: Check out pinned GoreeCloud Manager production-readiness revision
+        uses: actions/checkout@v6
+        with:
+          repository: GoreeCloud/goreecloud-manager
+          ref: 6290203c6793cb4dd497b5d4481e226344c55eab
+          path: manager-source
+          persist-credentials: false
+
+      - name: Validate disposable production-pattern Tasks and Manager topology
+        env:
+          MANAGER_REPO_DIR: ${{ github.workspace }}/manager-source
+        run: bash scripts/validate_manager_final_topology.sh
+
   docker-compose:
     runs-on: ubuntu-latest
 

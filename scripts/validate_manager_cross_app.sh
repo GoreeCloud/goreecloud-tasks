@@ -84,6 +84,9 @@ export TASKS_MANAGER_API_MAX_TASKS="100"
 cd "${ROOT_DIR}"
 "${TASKS_PYTHON}" manage.py migrate --noinput
 "${TASKS_PYTHON}" scripts/manager_cross_app_fixture.py seed
+"${TASKS_PYTHON}" manage.py validate_manager_integration_identity \
+  --username goreecloud-manager-integration \
+  --require-membership
 "${TASKS_PYTHON}" manage.py runserver "127.0.0.1:${TASKS_PORT}" --noreload >"${TASKS_LOG}" 2>&1 &
 TASKS_PID=$!
 wait_for_url "http://127.0.0.1:${TASKS_PORT}/health/" "GoreeCloud Tasks"

@@ -48,12 +48,32 @@ def _user(username: str):
     return user
 
 
+def _harden_integration_user(user) -> None:
+    """Keep the disposable service identity aligned with the production identity contract."""
+
+    user.is_active = True
+    user.is_staff = False
+    user.is_superuser = False
+    user.email = ""
+    user.set_unusable_password()
+    user.save(
+        update_fields=[
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "email",
+            "password",
+        ]
+    )
+
+
 def seed() -> None:
     """Create a deterministic synthetic integration scope."""
 
     owner = _user(OWNER_USERNAME)
     integration = _user(INTEGRATION_USERNAME)
     outsider = _user(OUTSIDER_USERNAME)
+    _harden_integration_user(integration)
 
     shared_project, _ = Project.objects.get_or_create(
         owner=owner,
@@ -143,8 +163,8 @@ def seed() -> None:
         defaults={"is_goreecloud_work": True},
     )
     Task.objects.get_or_create(
-        creator=integration,
-        title="Manager E2E integration personal task",
+        creator=owner,
+        title="Manager E2E owner personal task",
         defaults={"is_goreecloud_work": True},
     )
     Task.objects.get_or_create(
