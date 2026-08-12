@@ -86,7 +86,7 @@ The current migration mapping is deliberately explicit:
 
 - each uploaded project CSV becomes one new private GoreeCloud project;
 - Todoist p1, p2, p3, and p4 map to GoreeCloud P1, P2, P3, and P4 respectively, leaving GoreeCloud P0 reserved for critical operational work;
-- blank priority maps to GoreeCloud P4 rather than inventing an urgent priority for a source row without an explicit value;
+- a blank Todoist `PRIORITY` cell maps to GoreeCloud P1 because Todoist's current CSV format guide explicitly defines a blank priority cell as p1;
 - `INDENT` levels 1 through 4 reconstruct task/subtask hierarchy and an orphaned indent is rejected;
 - task-content `@label` tokens become project-scoped GoreeCloud labels and are removed from the imported title;
 - `note` rows become task comments attributed to the authenticated importing user;
@@ -120,7 +120,7 @@ Regression coverage verifies:
 - refusal to restore when a required collaborator account is missing;
 - authentication and explicit confirmation on the web restore path;
 - Todoist comma-delimited and semicolon-delimited parsing;
-- Todoist section, label, priority, indent, note/comment, and source-metadata mapping;
+- Todoist section, label, priority, blank-priority, indent, note/comment, and source-metadata mapping;
 - conservative due-date mapping;
 - preservation of unknown future columns;
 - rejection of malformed Todoist headers and task hierarchy;
