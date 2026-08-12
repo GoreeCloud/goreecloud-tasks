@@ -12,5 +12,6 @@ urlpatterns = [
     path("projects/", include("projects.urls")),
     path("labels/", include("labels.urls")),
     path("data/", include("portability.urls")),
+    path("notifications/", include("notifications.urls")),
     path("", include("tasks.urls")),
 ]
