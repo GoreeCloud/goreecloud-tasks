@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+  <div class="auth-card">
+    <p class="eyebrow">Private multi-user workspace</p>
+    <h1>Sign in</h1>
+    <p>Use your individual GoreeCloud Tasks account.</p>
+
+    {% if form.errors %}
+      <div class="notice error">The username or password was not accepted.</div>
+    {% endif %}
+
+    <form method="post" class="stacked-form">
+      {% csrf_token %}
+      <label for="{{ form.username.id_for_label }}">Username</label>
+      {{ form.username }}
+
+      <label for="{{ form.password.id_for_label }}">Password</label>
+      {{ form.password }}
+
+      {% if next %}
+        <input type="hidden" name="next" value="{{ next }}">
+      {% endif %}
+
+      <button class="primary-button" type="submit">Sign in</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
