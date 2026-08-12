@@ -112,6 +112,8 @@ The bearer token is a reusable secret and must not be committed to Git, stored i
 
 The complete service-identity and bearer-token procedure is documented in [`manager-integration-credential-lifecycle.md`](manager-integration-credential-lifecycle.md). That procedure defines the planned non-human identity posture, Viewer-only project authorization, protected runtime source, Vaultwarden recovery record, rotation, emergency revocation, recovery, and retirement controls without creating or authorizing production credentials.
 
+The separate production-readiness evidence gate is documented in [`manager-production-readiness-validation.md`](manager-production-readiness-validation.md). That plan defines the preferred same-VM `manager-tasks` Docker network, stable Tasks service alias, final file-backed secret validation, authorization acceptance dataset, private user-facing publication checks, monitoring, recovery, rollback, upgrade compatibility, and explicit go/no-go criteria without activating production.
+
 Transport security and network reachability remain separate deployment controls. A future production connection should use the approved private GoreeCloud service-publication and networking architecture rather than direct public backend exposure.
 
 ## Validation requirements
