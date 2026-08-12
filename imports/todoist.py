@@ -100,7 +100,6 @@ def _append_import_metadata(description, items):
 def _normalized_headers(fieldnames):
     if not fieldnames:
         raise TodoistCsvError("The Todoist CSV is missing a header row.")
-    normalized = []
     seen = set()
     for name in fieldnames:
         if name is None:
@@ -111,13 +110,11 @@ def _normalized_headers(fieldnames):
         if header in seen:
             raise TodoistCsvError(f"Duplicate Todoist CSV header: {header}.")
         seen.add(header)
-        normalized.append(header)
     missing = sorted(_REQUIRED_HEADERS - seen)
     if missing:
         raise TodoistCsvError(
             "Todoist CSV is missing required header(s): " + ", ".join(missing) + "."
         )
-    return normalized
 
 
 class TodoistImportAdapter:
@@ -134,7 +131,7 @@ class TodoistImportAdapter:
 
         dialect = _detect_dialect(text)
         reader = csv.DictReader(io.StringIO(text), dialect=dialect)
-        headers = _normalized_headers(reader.fieldnames)
+        _normalized_headers(reader.fieldnames)
         header_lookup = {
             original: original.strip().upper()
             for original in (reader.fieldnames or [])
@@ -152,6 +149,11 @@ class TodoistImportAdapter:
         current_section_description = ""
 
         for row_number, raw_row in enumerate(reader, start=2):
+            extra_values = raw_row.get(None)
+            if extra_values and any((value or "").strip() for value in extra_values):
+                raise TodoistCsvError(
+                    f"Row {row_number} contains more values than the CSV header defines."
+                )
             row = {
                 header_lookup.get(key, str(key).strip().upper()): (value or "").strip()
                 for key, value in raw_row.items()
@@ -323,7 +325,9 @@ class TodoistImportAdapter:
         )
 
     def normalize(self, payload, *, project_name=None) -> NormalizedImportBundle:
-        """Compatibility entry point for callers that already hold decoded CSV text."""
+        """Compatibility entry point for decoded, verified project CSV text only."""
         if not isinstance(payload, str):
-            raise TodoistCsvError("Todoist CSV payload must be decoded text.")
+            raise NotImplementedError(
+                "Unverified Todoist object/JSON payload formats are not supported; use a verified project CSV."
+            )
         return self.normalize_csv(payload, project_name=project_name or "")
