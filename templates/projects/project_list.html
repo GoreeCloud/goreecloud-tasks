@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Projects — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow">Owned and explicitly shared workspaces</p>
+        <h1>Projects</h1>
+      </div>
+      <a class="primary-button compact" href="{% url 'projects:create' %}">New project</a>
+    </header>
+
+    {% if projects %}
+      <div class="project-grid">
+        {% for project in projects %}
+          <a class="project-card" href="{% url 'projects:detail' project.pk %}">
+            <div class="project-card-heading">
+              <h2>{{ project.name }}</h2>
+              <span class="project-visibility">{{ project.get_visibility_display }}</span>
+            </div>
+            <p>
+              {{ project.user_role_label }}
+              {% if project.owner_id != request.user.id %}
+                · Owned by {{ project.owner.preferred_name }}
+              {% endif %}
+            </p>
+            <span class="secondary-link">Open project →</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h2>No projects yet.</h2>
+        <p>Create a private project for your own work, then explicitly enable sharing only when collaboration is needed.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

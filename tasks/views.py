@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
-from .forms import QuickAddForm, TaskForm
+from .forms import QuickAddForm, TaskForm, editable_projects_for
 from .models import Task
 
 
@@ -140,7 +140,13 @@ def task_create(request):
             messages.success(request, "Task created.")
             return redirect("tasks:task_edit", pk=task.pk)
     else:
-        form = TaskForm(user=request.user, initial={"assignee": request.user})
+        initial = {"assignee": request.user}
+        requested_project = request.GET.get("project")
+        if requested_project:
+            project = editable_projects_for(request.user).filter(pk=requested_project).first()
+            if project is not None:
+                initial["project"] = project
+        form = TaskForm(user=request.user, initial=initial)
 
     return render(
         request,

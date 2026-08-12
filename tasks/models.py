@@ -110,23 +110,53 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
+    def _previous_project_actor_state(self):
+        """Return the persisted project, creator, and assignee for an existing task."""
+        if not self.pk:
+            return None
+        return (
+            type(self).objects.filter(pk=self.pk)
+            .values("project_id", "creator_id", "assignee_id")
+            .first()
+        )
+
     def clean(self):
         """Enforce ownership and assignment boundaries at the model layer."""
         super().clean()
 
+        previous = self._previous_project_actor_state()
+
         if self.project_id:
-            if self.creator_id and not self.project.can_edit(self.creator):
+            retains_previous_creator = bool(
+                previous
+                and previous["project_id"] == self.project_id
+                and previous["creator_id"] == self.creator_id
+            )
+            if (
+                self.creator_id
+                and not self.project.can_edit(self.creator)
+                and not retains_previous_creator
+            ):
                 raise ValidationError(
                     {"creator": "The creator must be allowed to edit this project."}
                 )
 
             if self.assignee_id:
                 assignee_is_owner = self.project.owner_id == self.assignee_id
-                assignee_is_member = self.project.memberships.filter(
+                assignee_is_active_member = self.project.memberships.filter(
                     user_id=self.assignee_id,
                     is_active=True,
                 ).exists()
-                if not (assignee_is_owner or assignee_is_member):
+                retains_previous_assignee = bool(
+                    previous
+                    and previous["project_id"] == self.project_id
+                    and previous["assignee_id"] == self.assignee_id
+                )
+                if not (
+                    assignee_is_owner
+                    or assignee_is_active_member
+                    or retains_previous_assignee
+                ):
                     raise ValidationError(
                         {
                             "assignee": (

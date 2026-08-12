@@ -1,0 +1,246 @@
+.heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #161b22;
+  color: #c9d1d9;
+  cursor: pointer;
+}
+
+.secondary-button:hover,
+.secondary-button:focus-visible {
+  border-color: #58a6ff;
+  color: #ffffff;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.project-card {
+  display: grid;
+  gap: 14px;
+  min-height: 170px;
+  padding: 20px;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  background: #161b22;
+}
+
+.project-card:hover,
+.project-card:focus-visible {
+  border-color: #58a6ff;
+}
+
+.project-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-card h2,
+.section-heading h2 {
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.project-card p,
+.muted-copy {
+  margin: 0;
+  color: #8b949e;
+  line-height: 1.5;
+}
+
+.project-visibility,
+.role-badge {
+  padding: 3px 8px;
+  border: 1px solid #30363d;
+  border-radius: 999px;
+  color: #b1bac4;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.project-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.project-summary > div {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  background: #161b22;
+}
+
+.summary-label {
+  color: #8b949e;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.project-section {
+  margin-top: 34px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.compact-empty-state {
+  padding: 36px 20px;
+}
+
+.member-list {
+  overflow: hidden;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  background: #161b22;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 68px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #30363d;
+}
+
+.member-row:last-child {
+  border-bottom: 0;
+}
+
+.member-row > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.member-row span:not(.role-badge) {
+  color: #8b949e;
+  font-size: 0.86rem;
+}
+
+.owner-row {
+  background: #1c2128;
+}
+
+.member-actions,
+.member-actions form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-actions select,
+.membership-add-form input,
+.membership-add-form select {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+.compact-control {
+  padding: 8px 10px;
+}
+
+.membership-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  background: #161b22;
+}
+
+.privacy-warning {
+  padding: 12px 14px;
+  border: 1px solid #9e6a03;
+  border-radius: 8px;
+  background: rgba(158, 106, 3, 0.14);
+  color: #d29922;
+  line-height: 1.5;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .project-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .membership-add-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .membership-add-form .primary-button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .project-detail-heading,
+  .member-row,
+  .member-actions,
+  .member-actions form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .heading-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .project-summary,
+  .membership-add-form {
+    grid-template-columns: 1fr;
+  }
+
+  .member-actions select,
+  .member-actions button,
+  .membership-add-form .primary-button {
+    width: 100%;
+  }
+}

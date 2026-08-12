@@ -121,7 +121,18 @@ class TaskForm(forms.ModelForm):
         self.fields["project"].queryset = projects
         self.fields["project"].required = False
         self.fields["project"].empty_label = "Inbox"
-        self.fields["assignee"].queryset = assignable_users_for(user, projects)
+
+        assignees = assignable_users_for(user, projects)
+        if self.instance and self.instance.pk and self.instance.assignee_id:
+            User = get_user_model()
+            assignees = (
+                User.objects.filter(
+                    Q(pk__in=assignees.values("pk")) | Q(pk=self.instance.assignee_id)
+                )
+                .distinct()
+                .order_by("username")
+            )
+        self.fields["assignee"].queryset = assignees
         self.fields["assignee"].required = False
 
     def clean(self):
@@ -144,11 +155,21 @@ class TaskForm(forms.ModelForm):
 
         if assignee is not None:
             assignee_is_owner = project.owner_id == assignee.pk
-            assignee_is_member = project.memberships.filter(
+            assignee_is_active_member = project.memberships.filter(
                 user=assignee,
                 is_active=True,
             ).exists()
-            if not (assignee_is_owner or assignee_is_member):
+            retains_previous_assignee = bool(
+                self.instance
+                and self.instance.pk
+                and self.instance.project_id == project.pk
+                and self.instance.assignee_id == assignee.pk
+            )
+            if not (
+                assignee_is_owner
+                or assignee_is_active_member
+                or retains_previous_assignee
+            ):
                 self.add_error(
                     "assignee",
                     "The assignee must own or actively belong to the selected project.",
