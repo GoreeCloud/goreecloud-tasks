@@ -7,24 +7,32 @@ family, collaborative, and GoreeCloud operational work.
 
 **v0.1 development. Production deployment is not yet approved.**
 
-The current implementation establishes the multi-user security boundary and the
-first usable task workflows. Production publication remains blocked on the
-broader v0.1 acceptance requirements, including backup and restoration testing.
+The current implementation establishes the multi-user security boundary, the
+first usable task workflows, and the first complete project and membership
+management interface. Production publication remains blocked on the broader v0.1
+acceptance requirements, including backup and restoration testing.
 
 ## Implemented Foundation
 
 - Custom Django user model created before the first application migration.
 - Individual accounts and private personal task boundaries.
 - Private and explicitly shared projects.
+- Project list, project creation, project detail, and owner-controlled settings.
+- Explicit project membership administration by exact username.
 - Project Manager, Member, and Viewer roles.
+- Membership revocation without deleting membership history.
+- Automatic membership revocation when a shared project becomes private.
 - Authorization-aware task query helpers for read and edit access.
 - Server-side mutation checks that prevent ordinary users from editing work they
   are not authorized to change.
+- Historical task creator and assignee retention after project access is revoked,
+  while new relationships still require current authorization.
 - GoreeCloud P0 through P4 priorities with lifecycle status kept separate.
 - Task creation through Quick Add and the full task editor.
 - Task editing, completion, reopening, and deletion.
 - Inbox, Today, and Upcoming views.
 - Project-aware Quick Add limited to projects the current user may edit.
+- Project-aware full task creation with authorized project preselection.
 - Read-only presentation for tasks visible through Viewer membership.
 - Django admin limited to account administration; private task/project content
   is not registered there.
@@ -129,6 +137,30 @@ After signing in, the application provides:
 Shared-project Viewer membership remains read-only. Manager and Member roles may
 modify shared project work according to the project authorization boundary.
 
+## Project Workflows
+
+The Projects area now provides:
+
+- **Project list** containing only projects the current user owns or may access
+  through an active explicit membership.
+- **Private-by-default project creation** with no automatic sharing.
+- **Owner-controlled settings** for project name and Private/Shared visibility.
+- **Project detail** with open tasks, ownership, visibility, task count, and the
+  current user's effective access level.
+- **Explicit membership administration** by exact username without presenting a
+  directory of all user accounts.
+- **Manager, Member, and Viewer roles** with owner-only membership and project
+  settings administration.
+- **Immediate access revocation** by deactivating membership records instead of
+  deleting them, preserving the historical relationship.
+- **Privacy-preserving unsharing** where changing a shared project to Private
+  deactivates all active collaborator memberships.
+
+Membership revocation removes future project visibility and edit authorization.
+Existing tasks may retain a removed collaborator as their historical creator or
+assignee so that ordinary task updates and completion do not fail after access is
+revoked. New assignments still require the project owner or an active member.
+
 ## Tests
 
 Run the local checks with:
@@ -142,8 +174,10 @@ python manage.py test
 Multi-user authorization tests are launch-blocking. The suite verifies private
 user boundaries, explicit shared membership, Viewer read-only behavior,
 deactivated memberships, administrator separation, assignment constraints,
-Quick Add authorization, task mutation authorization, and Today/Upcoming
-visibility behavior.
+Quick Add authorization, task mutation authorization, Today/Upcoming visibility,
+project-list boundaries, owner-only project settings, explicit sharing, role
+changes, membership revocation, and historical task behavior after access is
+revoked.
 
 GitHub Actions additionally builds and starts the Docker Compose development
 stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
@@ -154,7 +188,7 @@ stack with PostgreSQL, applies migrations, and verifies the live health endpoint
 goreecloud-tasks/
 ├── goreecloud_tasks/   # Django project configuration
 ├── accounts/           # Individual user identity and preferences
-├── projects/           # Project ownership, memberships, and roles
+├── projects/           # Project ownership, memberships, roles, forms, and views
 ├── tasks/              # Core task models, forms, views, and authorization
 ├── templates/          # Server-rendered application templates
 ├── static/             # CSS and future client-side assets
