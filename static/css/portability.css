@@ -1,0 +1,78 @@
+.page-shell {
+  width: min(980px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0 64px;
+}
+
+.narrow-shell {
+  width: min(820px, calc(100% - 32px));
+}
+
+.page-heading {
+  margin-bottom: 24px;
+}
+
+.page-heading h1,
+.panel h2 {
+  margin: 6px 0 10px;
+}
+
+.page-heading > div > p:last-child,
+.panel p,
+.muted {
+  color: #8b949e;
+}
+
+.panel {
+  margin-bottom: 18px;
+  padding: 20px;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  background: #161b22;
+}
+
+.stack-gap {
+  display: grid;
+  gap: 14px;
+}
+
+.button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  background: #238636;
+  color: #ffffff;
+  font-weight: 650;
+}
+
+.simple-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.simple-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #30363d;
+}
+
+.simple-list a {
+  color: #58a6ff;
+}
+
+@media (max-width: 640px) {
+  .simple-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Data portability — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<section class="page-shell narrow-shell">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Data ownership</p>
+      <h1>Data portability</h1>
+      <p>Download application-owned task data in a versioned JSON format.</p>
+    </div>
+  </div>
+
+  <section class="panel stack-gap">
+    <div>
+      <h2>My archive</h2>
+      <p>Includes your private personal tasks and labels plus projects you own and the records contained by those projects. Projects owned by another user are not bulk-exported through this archive even when you can view them.</p>
+    </div>
+    <a class="button" href="{% url 'portability:user_export' %}">Download my JSON archive</a>
+  </section>
+
+  <section class="panel stack-gap">
+    <div>
+      <h2>Projects I own</h2>
+      <p>Project exports include project tasks, labels, memberships, comments, and attributable activity.</p>
+    </div>
+    {% if owned_projects %}
+      <ul class="simple-list">
+        {% for project in owned_projects %}
+          <li>
+            <span>{{ project.name }}</span>
+            <a href="{% url 'portability:project_export' project.pk %}">Download JSON</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">You do not own any projects yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel stack-gap">
+    <h2>Import status</h2>
+    <p>The source-neutral import boundary is now present. Todoist mapping is not enabled yet; GoreeCloud Tasks will not claim compatibility until the selected Todoist export format is verified and covered by migration tests.</p>
+  </section>
+</section>
+{% endblock %}
