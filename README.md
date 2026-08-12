@@ -12,10 +12,11 @@ task and project workflows, explicit collaboration, labels, subtasks, scoped
 search, the first GoreeCloud operational metadata, authorization-aware portable
 JSON export, safe provider-neutral import execution, guarded user-archive
 restoration, verified-format Todoist project CSV migration, a private
-user-reminder/ntfy delivery foundation, and schema-v2 notification/reminder
-portability for user archives. Production publication remains blocked on the
-broader v0.1 acceptance requirements, including approved backup and isolated
-restoration validation for the eventual production environment.
+user-reminder/ntfy delivery foundation, schema-v2 notification/reminder
+portability for user archives, disposable least-privilege ntfy integration
+validation, and the approved open-source license. Production publication remains
+blocked on the broader v0.1 acceptance requirements, including approved backup
+and isolated restoration validation for the eventual production environment.
 
 ## Implemented Foundation
 
@@ -69,6 +70,9 @@ restoration validation for the eventual production environment.
   present, and project name when present.
 - A `send_due_reminders` management command as a scheduler boundary without
   claiming that a production scheduler has been deployed.
+- Disposable CI validation against a real authenticated ntfy instance with a
+  write-only Tasks publisher, exact-topic read-only subscriber, deny-all default,
+  namespace isolation, and live application-to-ntfy delivery verification.
 - Versioned, authenticated JSON exports for user-owned data and owner-only
   project archives.
 - Schema-v2 user archives that preserve notification preferences and reminders
@@ -96,8 +100,10 @@ restoration validation for the eventual production environment.
 - Loopback-only development web-port publication and no published database port.
 - Non-sensitive `/health/` endpoint.
 - GitHub Actions checks for Django configuration, migration drift, application
-  tests, Docker image build, PostgreSQL-backed migrations, Compose startup, and
-  live health verification.
+  tests, Docker image build, PostgreSQL-backed migrations, Compose startup, live
+  health verification, and disposable ntfy integration validation.
+- GNU Affero General Public License v3.0 only (`AGPL-3.0-only`) selected for the
+  original GoreeCloud Tasks application.
 
 ## Technology
 
@@ -344,8 +350,9 @@ python manage.py send_due_reminders
 
 No production scheduler, ntfy service identity, real access token, server ACL,
 user subscription, Vaultwarden record, or production deployment is created by
-this repository feature. See `docs/feature-reminders-ntfy.md` for the complete
-security and deployment boundary.
+this repository feature. See `docs/feature-reminders-ntfy.md` and
+`docs/ntfy-provisioning-validation.md` for the complete security, validation, and
+future production-provisioning boundary.
 
 ## Data Portability
 
@@ -453,7 +460,9 @@ unknown-column preservation, authenticated Todoist web import, and Todoist
 project-name collision refusal.
 
 GitHub Actions additionally builds and starts the Docker Compose development
-stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
+stack with PostgreSQL, applies migrations, verifies the live health endpoint, and
+runs a disposable real-ntfy integration test against the application's actual
+publisher path and intended least-privilege ACL model.
 
 ## Repository Structure
 
@@ -471,8 +480,10 @@ goreecloud-tasks/
 ├── templates/          # Server-rendered application templates
 ├── static/             # CSS and future client-side assets
 ├── tests/              # Functional and authorization tests
-├── docs/               # Architecture, feature, and operating documentation
+├── docs/               # Architecture, feature, operating, and licensing documentation
 ├── .github/workflows/  # Continuous integration
+├── LICENSE
+├── LICENSE-NOTICE.md
 ├── compose.yml
 ├── Dockerfile
 ├── .env.example
@@ -480,11 +491,12 @@ goreecloud-tasks/
 └── manage.py
 ```
 
-Remaining milestone work includes server-side ntfy identity/ACL provisioning and
-end-to-end delivery validation before notification production use,
-project-archive restore semantics if required, additional GoreeCloud operational
-relationships, other integrations, administrative disaster-recovery export, and
-the public application API when those milestones require them.
+Remaining milestone work includes production ntfy identity/ACL provisioning,
+protected token installation, production scheduling and monitoring, end-client
+notification validation, project-archive restore semantics if required,
+additional GoreeCloud operational relationships, other integrations,
+administrative disaster-recovery export, and the public application API when
+those milestones require them.
 
 ## Production Boundary
 
@@ -492,13 +504,22 @@ This repository does not yet authorize production publication. Production use
 still requires the project specification's security, authorization, persistent
 storage, backup, restore, monitoring, reverse-proxy, upgrade, rollback, and
 multi-user acceptance requirements to be completed and documented. The presence
-of a user-archive restore function, provider CSV migration, or application-side
-ntfy reminder publisher is not by itself proof of a production backup,
-disaster-recovery process, notification scheduler, or validated notification
-delivery path.
+of a user-archive restore function, provider CSV migration, application-side
+ntfy reminder publisher, disposable ntfy integration test, or open-source
+license is not by itself proof of a production backup, disaster-recovery process,
+production scheduler, validated end-client delivery path, or production-ready
+release.
 
 ## License
 
-The repository is private while the application is being developed. The
-open-source license is intentionally **TBD** and must be selected and added
-before any public release.
+GoreeCloud Tasks is licensed under the **GNU Affero General Public License v3.0
+only** (`AGPL-3.0-only`). Copyright (C) 2026 LaDamian Goree.
+
+See `LICENSE` for the verbatim GNU AGPLv3 license text,
+`LICENSE-NOTICE.md` for the project-specific license selection and copyright
+notice, and `docs/licensing.md` for the licensing rationale, dependency boundary,
+and public-release compliance requirements.
+
+The repository remains private during development. Selecting the open-source
+license does not authorize production deployment, public repository visibility,
+or public service publication.
