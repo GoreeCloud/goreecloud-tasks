@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task %}Edit task{% else %}New task{% endif %} — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow">{% if task %}Task detail{% else %}Create work{% endif %}</p>
+        <h1>{% if task %}Edit task{% else %}New task{% endif %}</h1>
+      </div>
+      <a class="secondary-link" href="{% url 'tasks:dashboard' %}">Back to Inbox</a>
+    </header>
+
+    <form class="task-editor" method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      {% for field in form %}
+        <label class="field-group" for="{{ field.id_for_label }}">
+          <span>{{ field.label }}</span>
+          {{ field }}
+          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          {% for error in field.errors %}<strong class="field-error">{{ error }}</strong>{% endfor %}
+        </label>
+      {% endfor %}
+
+      <div class="editor-actions">
+        <button class="primary-button" type="submit">{% if task %}Save changes{% else %}Create task{% endif %}</button>
+      </div>
+    </form>
+
+    {% if task %}
+      <div class="danger-zone">
+        <div>
+          <strong>Delete task</strong>
+          <p>This permanently removes this task from GoreeCloud Tasks.</p>
+        </div>
+        <form method="post" action="{% url 'tasks:task_delete' task.pk %}">
+          {% csrf_token %}
+          <button class="danger-button" type="submit">Delete</button>
+        </form>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

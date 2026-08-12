@@ -1,0 +1,8 @@
+<nav class="sidebar" aria-label="Task navigation">
+  <a class="nav-item{% if active_view == 'inbox' %} active{% endif %}" href="{% url 'tasks:dashboard' %}">Inbox</a>
+  <a class="nav-item{% if active_view == 'today' %} active{% endif %}" href="{% url 'tasks:today' %}">Today</a>
+  <a class="nav-item{% if active_view == 'upcoming' %} active{% endif %}" href="{% url 'tasks:upcoming' %}">Upcoming</a>
+  <span class="nav-item planned">Projects <small>next</small></span>
+  <span class="nav-item planned">Shared Work <small>planned</small></span>
+  <span class="nav-item planned">GoreeCloud Work <small>planned</small></span>
+</nav>
