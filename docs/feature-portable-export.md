@@ -6,23 +6,29 @@ This capability provides machine-readable portability for GoreeCloud Tasks witho
 
 ## Export format
 
-Exports use UTF-8 JSON with the format identifier `goreecloud.tasks.export` and schema version `1`. Every document includes an export timestamp, an explicit scope, and application-owned records grouped by users, projects, memberships, labels, tasks, comments, and activity.
+Exports use UTF-8 JSON with the format identifier `goreecloud.tasks.export` and schema version `2`. Every document includes an export timestamp, an explicit scope, and application-owned records grouped by users, projects, memberships, labels, tasks, comments, and activity. Schema version 2 additionally carries user-private notification state inside complete user archives.
 
-The current schema preserves object identifiers and relationship identifiers so restoration can remap projects, parents, labels, creators, assignees, membership records, comments, and activity into new local database identifiers. Timestamps are ISO 8601 values. Task status and priority use their stored stable codes or values rather than presentation text.
+The current schema preserves object identifiers and relationship identifiers so restoration can remap projects, parents, labels, creators, assignees, membership records, comments, activity, and eligible task reminders into new local database identifiers. Timestamps are ISO 8601 values. Task status and priority use their stored stable codes or values rather than presentation text.
 
 ## User archive boundary
 
 A user's archive contains private personal tasks and labels plus projects owned by that user and the records contained by those owned projects. A project owned by somebody else is excluded even when the exporter currently has Manager, Member, or Viewer access. Normal read access does not automatically become a bulk-export right over another person's project.
 
+Schema version 2 adds the user's persisted notification preferences and reminders whose referenced tasks are already inside that same user-archive ownership boundary. A reminder attached only to a task in another owner's shared project is not exported because exporting the reminder would otherwise require widening the archive to include task content that the user does not own. The archive records only the count of such excluded reminders so the limitation is visible without disclosing the excluded task content.
+
 ## Project archive boundary
 
 Project archive download is owner-only in v0.1. It contains the selected project and its memberships, labels, tasks, comments, activity, and referenced users.
+
+Project archives deliberately do not contain user notification preferences or reminder schedules. Reminder state is private to the individual user and ordinary project ownership is not treated as authority to export a collaborator's personal reminder configuration.
 
 Project archive restoration is not enabled yet. The guarded restoration workflow described below accepts complete `user_archive` documents only.
 
 ## Sensitive-data minimization
 
-The export does not include passwords, password hashes, email addresses, sessions, authentication tokens, secret configuration, or unrelated account fields. User references contain only the local user ID and username. Comment bodies and task descriptions are included because they are application-owned task content inside the approved export scope.
+The export does not include passwords, password hashes, email addresses, sessions, authentication tokens, ntfy publisher credentials, secret configuration, or unrelated account fields. User references contain only the local user ID and username. Comment bodies and task descriptions are included because they are application-owned task content inside the approved export scope.
+
+A schema-v2 user archive may include the user's generated ntfy topic because that topic is application configuration rather than an authentication credential. ntfy access remains controlled by the external server's authenticated identities and ACLs. Transient reminder `last_error` delivery text is intentionally omitted from portable archives so internal publisher/server error detail is not carried into user data portability. Reminder schedule, sent/cancelled state, attempt count, last-attempt timestamp, and historical timestamps are preserved.
 
 Downloads and the authenticated portability page are marked `private, no-store`. JSON downloads are served as attachments.
 
@@ -50,23 +56,29 @@ This boundary allows provider migration work to proceed without allowing an exte
 
 ## Full-fidelity user archive restoration
 
-GoreeCloud-native recovery uses the richer versioned archive schema directly because a full Tasks recovery must preserve application relationships that ordinary provider imports do not normally carry, including memberships, creators, assignees, comments, material activity, historical role state, timestamps, and GoreeCloud operational metadata.
+GoreeCloud-native recovery uses the richer versioned archive schema directly because a full Tasks recovery must preserve application relationships that ordinary provider imports do not normally carry, including memberships, creators, assignees, comments, material activity, historical role state, timestamps, GoreeCloud operational metadata, notification preferences, and eligible reminder state.
 
 The v0.1 user-archive restore workflow is intentionally conservative:
 
-- only `goreecloud.tasks.export` schema version `1` is accepted;
+- `goreecloud.tasks.export` user archives using schema version `1` or `2` are accepted;
+- schema version 1 remains supported as a legacy core-data archive and contains no notification state;
+- schema version 2 validates and restores the user-private notification state carried by the archive;
 - only complete `user_archive` scope is accepted;
 - the archived username must exactly match the authenticated account username;
 - every archived collaborator username must already exist as a local account;
 - the restore process never creates user accounts from archive content;
 - the authenticated user must have no existing owned Tasks projects, personal Tasks labels, or private personal Tasks before restoration begins;
+- schema-v2 restoration additionally requires that the target user have no existing Tasks reminders, preventing reminder-state merge ambiguity;
 - existing application-owned Tasks data is not overwritten or merged;
-- project, membership, label, task, parent, label-assignment, user, comment, and activity references are validated before persistence;
-- task priorities, statuses, timestamps, visibility values, membership roles, and activity kinds are validated against the current application model;
+- project, membership, label, task, parent, label-assignment, user, comment, activity, notification-preference, and reminder references are validated before persistence;
+- task priorities, statuses, timestamps, visibility values, membership roles, activity kinds, reminder timestamps, reminder lifecycle state, lead time, and ntfy topic syntax are validated against the current application model;
+- an archived ntfy topic is refused if that topic is already assigned to another local user;
 - private projects may not restore with active memberships;
 - archived user records contain only the identity references already present in the export schema.
 
-The complete reconstruction occurs inside one database transaction. Historical collaborators are temporarily granted the minimum model-compatible project state needed to reconstruct records that were valid before a later role reduction or membership revocation. That temporary state exists only inside the uncommitted transaction. The archived project visibility, membership role, active/inactive state, and timestamps are restored before commit.
+The complete schema-v2 reconstruction occurs inside one outer database transaction. The existing core archive restorer reconstructs projects, memberships, labels, tasks, comments, activity, and historical timestamps. The notification layer then remaps archived reminder task IDs to the newly reconstructed task records and restores the user's notification preference plus eligible reminders before that outer transaction is allowed to commit.
+
+Historical collaborators are temporarily granted the minimum model-compatible project state needed to reconstruct records that were valid before a later role reduction or membership revocation. That temporary state exists only inside the uncommitted transaction. The archived project visibility, membership role, active/inactive state, and timestamps are restored before commit.
 
 This design allows records such as a task created by a collaborator who was later removed to remain historically attributable after recovery without permanently reactivating that collaborator.
 
@@ -105,10 +117,17 @@ The upload endpoint is authenticated, limited to 25 MiB, decodes UTF-8 with opti
 
 Regression coverage verifies:
 
-- authenticated versioned export;
+- authenticated schema-v2 export;
 - owner-only project bulk export;
 - exclusion of other users' private and other-owned shared work;
 - export relationship and GoreeCloud operational-field preservation;
+- schema-v2 notification-preference export and reminder export for archive-owned tasks;
+- exclusion and non-disclosure of reminder state tied only to another owner's shared project;
+- omission of transient reminder publisher error text;
+- project archives do not contain private user notification state;
+- schema-v2 notification preference and reminder restoration with task-ID remapping;
+- schema-v1 user-archive backward compatibility;
+- ntfy topic collision refusal before core restored data can commit;
 - sensitive account-field omission;
 - source-neutral import execution into private user-owned data;
 - atomic rejection of invalid normalized relationships;
