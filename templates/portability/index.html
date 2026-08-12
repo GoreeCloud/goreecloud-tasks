@@ -8,9 +8,30 @@
     <div>
       <p class="eyebrow">Data ownership</p>
       <h1>Data portability</h1>
-      <p>Download application-owned task data in a versioned JSON format.</p>
+      <p>Download application-owned task data and restore a complete user archive through guarded recovery controls.</p>
     </div>
   </div>
+
+  {% if restore_error %}
+    <div class="status-banner error-banner" role="alert">
+      <strong>Restore blocked.</strong>
+      <span>{{ restore_error }}</span>
+    </div>
+  {% endif %}
+
+  {% if restore_summary %}
+    <div class="status-banner success-banner" role="status">
+      <strong>Archive restored.</strong>
+      <span>
+        {{ restore_summary.projects_restored }} project{{ restore_summary.projects_restored|pluralize }},
+        {{ restore_summary.memberships_restored }} membership{{ restore_summary.memberships_restored|pluralize }},
+        {{ restore_summary.labels_restored }} label{{ restore_summary.labels_restored|pluralize }},
+        {{ restore_summary.tasks_restored }} task{{ restore_summary.tasks_restored|pluralize }},
+        {{ restore_summary.comments_restored }} comment{{ restore_summary.comments_restored|pluralize }}, and
+        {{ restore_summary.activity_events_restored }} activity event{{ restore_summary.activity_events_restored|pluralize }} restored.
+      </span>
+    </div>
+  {% endif %}
 
   <section class="panel stack-gap">
     <div>
@@ -18,6 +39,29 @@
       <p>Includes your private personal tasks and labels plus projects you own and the records contained by those projects. Projects owned by another user are not bulk-exported through this archive even when you can view them.</p>
     </div>
     <a class="button" href="{% url 'portability:user_export' %}">Download my JSON archive</a>
+  </section>
+
+  <section class="panel stack-gap">
+    <div>
+      <h2>Restore my archive</h2>
+      <p>This recovery path restores a complete GoreeCloud Tasks user archive without overwriting or merging existing owned Tasks data. The archive username must exactly match your account, and every archived collaborator username must already exist locally.</p>
+    </div>
+    <div class="recovery-note">
+      <strong>Recovery boundary</strong>
+      <p>Restoration is allowed only when your account has no existing owned Tasks projects, personal labels, or private personal tasks. This prevents accidental duplicate or destructive merges. User accounts are never created from an archive.</p>
+    </div>
+    <form class="restore-form" method="post" action="{% url 'portability:restore_user_archive' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label class="file-field">
+        <span>GoreeCloud Tasks user archive</span>
+        <input type="file" name="archive" accept="application/json,.json" required>
+      </label>
+      <label class="confirm-field">
+        <input type="checkbox" name="confirm_restore" value="yes" required>
+        <span>I understand that this is a recovery operation for a clean account-owned Tasks data set and that existing data will not be merged or overwritten.</span>
+      </label>
+      <button class="button" type="submit">Validate and restore archive</button>
+    </form>
   </section>
 
   <section class="panel stack-gap">
@@ -40,8 +84,9 @@
   </section>
 
   <section class="panel stack-gap">
-    <h2>Import status</h2>
-    <p>The source-neutral import boundary is now present. Todoist mapping is not enabled yet; GoreeCloud Tasks will not claim compatibility until the selected Todoist export format is verified and covered by migration tests.</p>
+    <h2>External import status</h2>
+    <p>The source-neutral import executor now validates provider-normalized projects, labels, tasks, subtasks, priorities, statuses, due times, and relationship scopes before an atomic database write. External imports create private data owned by the importing user and cannot create accounts, memberships, or shared projects.</p>
+    <p>Todoist mapping is still disabled. GoreeCloud Tasks will not claim compatibility until the selected Todoist export format is verified and covered by migration tests.</p>
   </section>
 </section>
 {% endblock %}

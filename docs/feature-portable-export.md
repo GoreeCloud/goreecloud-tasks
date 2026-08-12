@@ -1,14 +1,14 @@
-# Portable export and import boundary
+# Portable export, import, and restoration boundary
 
 ## Purpose
 
-This increment creates the first machine-readable portability path for GoreeCloud Tasks without turning ordinary read access into a new bulk-exfiltration permission.
+This capability provides machine-readable portability for GoreeCloud Tasks without turning ordinary read access into a new bulk-exfiltration permission and without treating an uploaded archive as trusted database state.
 
 ## Export format
 
 Exports use UTF-8 JSON with the format identifier `goreecloud.tasks.export` and schema version `1`. Every document includes an export timestamp, an explicit scope, and application-owned records grouped by users, projects, memberships, labels, tasks, comments, and activity.
 
-The current schema preserves object identifiers and relationship identifiers so a future importer can remap projects, parents, labels, creators, assignees, membership records, comments, and activity into a restored installation. Timestamps are ISO 8601 values. Task status and priority use their stored stable codes/values rather than presentation text.
+The current schema preserves object identifiers and relationship identifiers so restoration can remap projects, parents, labels, creators, assignees, membership records, comments, and activity into new local database identifiers. Timestamps are ISO 8601 values. Task status and priority use their stored stable codes or values rather than presentation text.
 
 ## User archive boundary
 
@@ -18,18 +18,82 @@ A user's archive contains private personal tasks and labels plus projects owned 
 
 Project archive download is owner-only in v0.1. It contains the selected project and its memberships, labels, tasks, comments, activity, and referenced users.
 
+Project archive restoration is not enabled yet. The guarded restoration workflow described below accepts complete `user_archive` documents only.
+
 ## Sensitive-data minimization
 
 The export does not include passwords, password hashes, email addresses, sessions, authentication tokens, secret configuration, or unrelated account fields. User references contain only the local user ID and username. Comment bodies and task descriptions are included because they are application-owned task content inside the approved export scope.
 
-Downloads are marked `private, no-store` and served as attachments.
+Downloads and the authenticated portability page are marked `private, no-store`. JSON downloads are served as attachments.
 
-## Import architecture
+## Source-neutral external import execution
 
-The `imports` package now defines a source-neutral normalization schema. Future external adapters must translate provider-specific exports into `NormalizedImportBundle` records before any database mutation. This keeps provider parsing separate from GoreeCloud Tasks persistence and authorization logic.
+The `imports` package defines a provider-neutral normalization schema and a database executor. Future provider adapters must translate provider-specific exports into `NormalizedImportBundle` before persistence.
 
-A `TodoistImportAdapter` boundary is present, but its parser intentionally raises `NotImplementedError`. GoreeCloud Tasks does not claim Todoist import compatibility until the selected Todoist export format has been verified, mapped, and covered by migration tests.
+The executor validates the complete normalized bundle before writing. Validation covers unique source identifiers, project and label names, project references, label scope, task-parent scope, parent cycles, task priorities, task statuses, and timezone-aware due timestamps.
+
+Execution is atomic. If validation or persistence fails, the import does not intentionally leave a partially created provider import.
+
+External provider imports follow a deliberately narrow authorization boundary:
+
+- imported projects are created as Private;
+- imported projects are owned by the authenticated importing user;
+- imported tasks are created and assigned to the authenticated importing user;
+- imported labels are owned by the authenticated importing user;
+- no user accounts are created;
+- no project memberships are created;
+- no shared projects are created;
+- existing projects or personal labels are not silently overwritten or merged when names collide.
+
+This boundary allows provider migration work to proceed without allowing an external file to grant access to another account.
+
+## Full-fidelity user archive restoration
+
+GoreeCloud-native recovery uses the richer versioned archive schema directly because a full Tasks recovery must preserve application relationships that ordinary provider imports do not normally carry, including memberships, creators, assignees, comments, material activity, historical role state, timestamps, and GoreeCloud operational metadata.
+
+The v0.1 user-archive restore workflow is intentionally conservative:
+
+- only `goreecloud.tasks.export` schema version `1` is accepted;
+- only complete `user_archive` scope is accepted;
+- the archived username must exactly match the authenticated account username;
+- every archived collaborator username must already exist as a local account;
+- the restore process never creates user accounts from archive content;
+- the authenticated user must have no existing owned Tasks projects, personal Tasks labels, or private personal Tasks before restoration begins;
+- existing application-owned Tasks data is not overwritten or merged;
+- project, membership, label, task, parent, label-assignment, user, comment, and activity references are validated before persistence;
+- task priorities, statuses, timestamps, visibility values, membership roles, and activity kinds are validated against the current application model;
+- private projects may not restore with active memberships;
+- archived user records contain only the identity references already present in the export schema.
+
+The complete reconstruction occurs inside one database transaction. Historical collaborators are temporarily granted the minimum model-compatible project state needed to reconstruct records that were valid before a later role reduction or membership revocation. That temporary state exists only inside the uncommitted transaction. The archived project visibility, membership role, active/inactive state, and timestamps are restored before commit.
+
+This design allows records such as a task created by a collaborator who was later removed to remain historically attributable after recovery without permanently reactivating that collaborator.
+
+## User interface recovery controls
+
+The Data portability page provides a user-archive upload control with an explicit recovery acknowledgement. Uploads are limited to 25 MiB and must be valid UTF-8 JSON. The server performs all archive validation; the file extension and browser-provided MIME type are not treated as proof that the archive is safe.
+
+The restore form does not provide merge or overwrite options in v0.1. Those behaviors would require separate conflict-resolution semantics and additional authorization tests.
+
+## Todoist boundary
+
+A `TodoistImportAdapter` boundary remains present, but its parser intentionally raises `NotImplementedError`. GoreeCloud Tasks does not claim Todoist import compatibility until the selected Todoist export format has been verified, mapped into the source-neutral schema, and covered by migration tests.
 
 ## Validation
 
-Regression tests verify authentication, schema versioning, owner-only project export, exclusion of other users' private and other-owned shared work, relationship preservation, GoreeCloud operational-field preservation, sensitive account-field omission, and the non-claiming Todoist adapter boundary.
+Regression coverage now verifies:
+
+- authenticated versioned export;
+- owner-only project bulk export;
+- exclusion of other users' private and other-owned shared work;
+- export relationship and GoreeCloud operational-field preservation;
+- sensitive account-field omission;
+- source-neutral import execution into private user-owned data;
+- atomic rejection of invalid normalized relationships;
+- collision refusal instead of silent merging;
+- full user-archive restoration of projects, memberships, labels, tasks, subtasks, comments, activity, identity relationships, historical inactive membership state, timestamps, and GoreeCloud operational metadata;
+- refusal to restore into a non-clean target account;
+- refusal to restore an archive to a differently named account;
+- refusal to restore when a required collaborator account is missing;
+- authentication and explicit confirmation on the web restore path; and
+- the non-claiming Todoist adapter boundary.

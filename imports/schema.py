@@ -8,6 +8,7 @@ from datetime import datetime
 class NormalizedLabel:
     source_id: str
     name: str
+    project_source_id: str | None = None
 
 
 @dataclass(frozen=True)
