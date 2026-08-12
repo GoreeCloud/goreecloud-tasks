@@ -8,6 +8,7 @@ on:
       - "fix/**"
       - "security/**"
       - "scaffold/**"
+      - "agent/**"
   pull_request:
 
 permissions:
@@ -62,6 +63,40 @@ jobs:
 
       - name: Validate disposable ntfy ACL and live Tasks delivery
         run: bash scripts/validate_ntfy_integration.sh
+
+  manager-cross-app:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out GoreeCloud Tasks
+        uses: actions/checkout@v6
+
+      - name: Check out pinned GoreeCloud Manager integration revision
+        uses: actions/checkout@v6
+        with:
+          repository: GoreeCloud/goreecloud-manager
+          ref: 1ab53c57ac225829f8ffb103e40b9983e148e480
+          path: manager-source
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Create isolated Tasks and Manager environments
+        run: |
+          python -m venv .venv-tasks
+          python -m venv .venv-manager
+          .venv-tasks/bin/python -m pip install --requirement requirements.txt
+          .venv-manager/bin/python -m pip install --requirement manager-source/requirements.txt
+
+      - name: Validate live Tasks and Manager authorization contract
+        env:
+          MANAGER_REPO_DIR: ${{ github.workspace }}/manager-source
+          TASKS_PYTHON: ${{ github.workspace }}/.venv-tasks/bin/python
+          MANAGER_PYTHON: ${{ github.workspace }}/.venv-manager/bin/python
+        run: bash scripts/validate_manager_cross_app.sh
 
   docker-compose:
     runs-on: ubuntu-latest
