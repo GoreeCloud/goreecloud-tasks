@@ -7,6 +7,7 @@ from .views import health
 
 urlpatterns = [
     path("health/", health, name="health"),
+    path("api/v1/", include("api.urls")),
     path("admin/", admin.site.urls),
     path("accounts/", include("django.contrib.auth.urls")),
     path("projects/", include("projects.urls")),
