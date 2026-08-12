@@ -11,4 +11,5 @@ urlpatterns = [
     path("export/me/", views.user_export, name="user_export"),
     path("export/projects/<int:pk>/", views.project_export, name="project_export"),
     path("restore/me/", views.restore_user_archive, name="restore_user_archive"),
+    path("import/todoist/", views.import_todoist_csv, name="import_todoist_csv"),
 ]

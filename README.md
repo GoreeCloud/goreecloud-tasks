@@ -10,10 +10,11 @@ family, collaborative, and GoreeCloud operational work.
 The current implementation establishes the multi-user security boundary, usable
 task and project workflows, explicit collaboration, labels, subtasks, scoped
 search, the first GoreeCloud operational metadata, authorization-aware portable
-JSON export, safe provider-neutral import execution, and guarded user-archive
-restoration. Production publication remains blocked on the broader v0.1
-acceptance requirements, including approved backup and isolated restoration
-validation for the eventual production environment.
+JSON export, safe provider-neutral import execution, guarded user-archive
+restoration, and verified-format Todoist project CSV migration. Production
+publication remains blocked on the broader v0.1 acceptance requirements,
+including approved backup and isolated restoration validation for the eventual
+production environment.
 
 ## Implemented Foundation
 
@@ -61,8 +62,10 @@ validation for the eventual production environment.
   validation, historical membership preservation, and atomic reconstruction.
 - Authenticated Data portability recovery controls with explicit confirmation,
   UTF-8 JSON parsing, a 25 MiB upload limit, and private/no-store responses.
-- Todoist adapter boundary that does not claim support for an unverified provider
-  export format.
+- Verified-format Todoist project CSV migration for tasks, subtasks, project
+  labels, task notes/comments, priorities, and conservative schedule metadata.
+- Todoist author/responsible values are preserved as source metadata and never
+  create or assign GoreeCloud user identities.
 - Django admin limited to account administration; private task/project/label
   content is not registered there.
 - PostgreSQL-ready application configuration with SQLite for isolated tests.
@@ -298,9 +301,9 @@ account fields. Downloads are served as private, non-cacheable attachments.
 
 The `imports` package provides a provider-independent normalization layer plus an
 atomic execution boundary. Provider-normalized projects, labels, tasks, parent
-relationships, priorities, statuses, and due timestamps are validated before
-persistence. The executor creates only private data owned by the importing user,
-never creates accounts or memberships, and refuses project or personal-label
+relationships, priorities, statuses, due timestamps, and comments are validated
+before persistence. The executor creates only private data owned by the importing
+user, never creates accounts or memberships, and refuses project or personal-label
 name collisions instead of silently merging records.
 
 The Data portability area also provides guarded full-user-archive recovery. A
@@ -312,9 +315,15 @@ memberships, labels, tasks, subtasks, comments, activity, timestamps, and
 operational metadata inside one transaction. It never creates user accounts and
 does not overwrite or merge existing owned Tasks data.
 
-A Todoist adapter boundary exists, but it intentionally does not parse or claim
-support for a provider export format that has not yet been verified and covered
-by migration tests.
+The same area now accepts a Todoist project CSV and imports it into a new private
+GoreeCloud project. The verified mapping supports `task`, `section`, and `note`
+rows; Todoist p1-p4; INDENT-based task hierarchy; task-content `@label` tokens;
+and task notes as GoreeCloud comments. Provider author/responsible identity text,
+section context, natural-language or recurring schedule expressions, deadlines,
+duration values, and unknown source columns are preserved as source metadata when
+there is no safe current native field. Only an explicit timezone-aware
+ISO-8601/RFC3339 date is promoted to the native due timestamp. The provider file
+never creates GoreeCloud identities, memberships, or shared projects.
 
 ## Tests
 
@@ -339,11 +348,14 @@ deletion, subtask authorization and scope, search isolation, completed-task
 retrieval, optional operational metadata, data-minimized label-change activity,
 versioned export behavior, user/archive scope isolation, owner-only project
 export, relationship and operational-field preservation, sensitive account-field
-omission, provider-neutral private import execution, invalid-import rollback,
-import collision refusal, full user-archive reconstruction, historical role and
-membership restoration, identity remapping, restore target isolation, missing
-collaborator refusal, restore confirmation/authentication, and the non-claiming
-Todoist adapter boundary.
+omission, provider-neutral private import execution, normalized comment
+persistence, invalid-import rollback, import collision refusal, full user-archive
+reconstruction, historical role and membership restoration, identity remapping,
+restore target isolation, missing collaborator refusal, restore
+confirmation/authentication, Todoist CSV delimiter/header validation, Todoist
+section/label/priority/indent/note mapping, conservative due-date handling,
+unknown-column preservation, authenticated Todoist web import, and Todoist
+project-name collision refusal.
 
 GitHub Actions additionally builds and starts the Docker Compose development
 stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
@@ -372,10 +384,10 @@ goreecloud-tasks/
 └── manage.py
 ```
 
-Remaining milestone work includes verified Todoist mapping, project-archive
-restore semantics if required, notifications and reminders, additional GoreeCloud
-operational relationships, integrations, administrative disaster-recovery export,
-and the public application API when those milestones require them.
+Remaining milestone work includes project-archive restore semantics if required,
+notifications and reminders, additional GoreeCloud operational relationships,
+integrations, administrative disaster-recovery export, and the public application
+API when those milestones require them.
 
 ## Production Boundary
 
@@ -383,8 +395,8 @@ This repository does not yet authorize production publication. Production use
 still requires the project specification's security, authorization, persistent
 storage, backup, restore, monitoring, reverse-proxy, upgrade, rollback, and
 multi-user acceptance requirements to be completed and documented. The presence
-of a user-archive restore function is not by itself proof of a production backup
-or disaster-recovery process.
+of a user-archive restore function or provider CSV migration is not by itself
+proof of a production backup or disaster-recovery process.
 
 ## License
 
