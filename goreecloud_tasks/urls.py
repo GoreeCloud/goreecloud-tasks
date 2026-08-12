@@ -1,0 +1,13 @@
+"""Root URL configuration for GoreeCloud Tasks."""
+
+from django.contrib import admin
+from django.urls import include, path
+
+from .views import health
+
+urlpatterns = [
+    path("health/", health, name="health"),
+    path("admin/", admin.site.urls),
+    path("accounts/", include("django.contrib.auth.urls")),
+    path("", include("tasks.urls")),
+]

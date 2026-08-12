@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Inbox — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  <nav class="sidebar" aria-label="Task navigation">
+    <a class="nav-item active" href="{% url 'tasks:dashboard' %}">Inbox</a>
+    <span class="nav-item planned">Today <small>planned</small></span>
+    <span class="nav-item planned">Upcoming <small>planned</small></span>
+    <span class="nav-item planned">Projects <small>planned</small></span>
+    <span class="nav-item planned">Shared Work <small>planned</small></span>
+    <span class="nav-item planned">GoreeCloud Work <small>planned</small></span>
+  </nav>
+
+  <section class="task-panel">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow">Private personal workspace</p>
+        <h1>Inbox</h1>
+      </div>
+      <span class="count">{{ personal_inbox|length }}</span>
+    </header>
+
+    {% if personal_inbox %}
+      <ul class="task-list">
+        {% for task in personal_inbox %}
+          <li class="task-row">
+            <div>
+              <strong>{{ task.title }}</strong>
+              <div class="task-meta">
+                {{ task.get_priority_display }} · {{ task.get_status_display }}
+                {% if task.due_at %} · Due {{ task.due_at|date:"M j, Y g:i A" }}{% endif %}
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">
+        <h2>Your Inbox is ready.</h2>
+        <p>
+          The private multi-user foundation is in place. Quick Add and task
+          editing arrive in the next feature milestone.
+        </p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
