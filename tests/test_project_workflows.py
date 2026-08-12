@@ -187,6 +187,18 @@ class ProjectWorkflowTests(TestCase):
             ProjectMembership.objects.filter(pk=self.member_membership.pk).exists()
         )
 
+    def test_existing_assignee_can_be_retained_after_membership_revocation(self):
+        self.member_membership.is_active = False
+        self.member_membership.save(update_fields=["is_active"])
+
+        self.shared_task.status = Task.Status.COMPLETED
+        self.shared_task.save(update_fields=["status", "completed_at", "updated_at"])
+        self.shared_task.refresh_from_db()
+
+        self.assertEqual(self.shared_task.assignee, self.member)
+        self.assertEqual(self.shared_task.status, Task.Status.COMPLETED)
+        self.assertIsNotNone(self.shared_task.completed_at)
+
     def test_switching_shared_project_to_private_revokes_active_memberships(self):
         self.client.force_login(self.owner)
         response = self.client.post(
