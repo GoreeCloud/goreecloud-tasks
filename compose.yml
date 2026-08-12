@@ -54,6 +54,7 @@ services:
       - "127.0.0.1:${APP_PORT:-8000}:8000"
     networks:
       - backend
+      - edge
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -79,5 +80,10 @@ volumes:
   postgres_data:
 
 networks:
+  # Database traffic stays on an internal-only network with no host exposure.
   backend:
     internal: true
+  # The web container also joins a normal bridge so its loopback-only host port
+  # is reachable during development and health validation.
+  edge:
+    driver: bridge
