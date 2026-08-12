@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -40,9 +41,6 @@ def _visible_project_or_404(user, pk):
     """Resolve a project without revealing unauthorized object existence."""
     project = get_object_or_404(Project.objects.select_related("owner"), pk=pk)
     if not project.can_view(user):
-        # Deliberately return 404 instead of exposing whether the object exists.
-        from django.http import Http404
-
         raise Http404
     return project
 
@@ -50,6 +48,37 @@ def _visible_project_or_404(user, pk):
 def _owned_project_or_404(user, pk):
     """Resolve a project only when the current user owns its settings boundary."""
     return get_object_or_404(Project.objects.select_related("owner"), pk=pk, owner=user)
+
+
+def _project_detail_context(request, project, membership_form=None):
+    """Build project detail context through the current user's authorization boundary."""
+    tasks = list(
+        Task.objects.visible_to(request.user)
+        .filter(project=project)
+        .exclude(status__in=TERMINAL_TASK_STATUSES)
+        .select_related("creator", "assignee", "project")
+    )
+    can_edit_tasks = project.can_edit(request.user)
+    for task in tasks:
+        task.user_can_edit = can_edit_tasks
+
+    memberships = list(
+        project.memberships.filter(is_active=True)
+        .select_related("user")
+        .order_by("user__username")
+    )
+
+    return {
+        "project": project,
+        "tasks": tasks,
+        "task_count": len(tasks),
+        "memberships": memberships,
+        "membership_form": membership_form or MembershipInviteForm(project=project),
+        "role_choices": ProjectMembership.Role.choices,
+        "active_view": "projects",
+        "user_is_owner": project.owner_id == request.user.id,
+        "user_can_edit_tasks": can_edit_tasks,
+    }
 
 
 @login_required
@@ -77,35 +106,10 @@ def project_list(request):
 def project_detail(request, pk):
     """Show accessible project work and membership context."""
     project = _visible_project_or_404(request.user, pk)
-    tasks = list(
-        Task.objects.visible_to(request.user)
-        .filter(project=project)
-        .exclude(status__in=TERMINAL_TASK_STATUSES)
-        .select_related("creator", "assignee", "project")
-    )
-    can_edit_tasks = project.can_edit(request.user)
-    for task in tasks:
-        task.user_can_edit = can_edit_tasks
-
-    memberships = list(
-        project.memberships.filter(is_active=True)
-        .select_related("user")
-        .order_by("user__username")
-    )
-
     return render(
         request,
         "projects/project_detail.html",
-        {
-            "project": project,
-            "tasks": tasks,
-            "task_count": len(tasks),
-            "memberships": memberships,
-            "membership_form": MembershipInviteForm(project=project),
-            "active_view": "projects",
-            "user_is_owner": project.owner_id == request.user.id,
-            "user_can_edit_tasks": can_edit_tasks,
-        },
+        _project_detail_context(request, project),
     )
 
 
@@ -185,31 +189,10 @@ def membership_add(request, pk):
 
     form = MembershipInviteForm(request.POST, project=project)
     if not form.is_valid():
-        tasks = list(
-            Task.objects.visible_to(request.user)
-            .filter(project=project)
-            .exclude(status__in=TERMINAL_TASK_STATUSES)
-            .select_related("creator", "assignee", "project")
-        )
-        for task in tasks:
-            task.user_can_edit = True
         return render(
             request,
             "projects/project_detail.html",
-            {
-                "project": project,
-                "tasks": tasks,
-                "task_count": len(tasks),
-                "memberships": list(
-                    project.memberships.filter(is_active=True)
-                    .select_related("user")
-                    .order_by("user__username")
-                ),
-                "membership_form": form,
-                "active_view": "projects",
-                "user_is_owner": True,
-                "user_can_edit_tasks": True,
-            },
+            _project_detail_context(request, project, membership_form=form),
             status=400,
         )
 
