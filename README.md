@@ -29,7 +29,7 @@ broader v0.1 acceptance requirements, including backup and restoration testing.
 - Django admin limited to account administration; private task/project content
   is not registered there.
 - PostgreSQL-ready application configuration with SQLite for isolated tests.
-- File-based secret support.
+- File-based secret support for the non-root application container.
 - Dockerfile and Docker Compose development stack.
 - Loopback-only development web-port publication and no published database port.
 - Non-sensitive `/health/` endpoint.
@@ -87,8 +87,15 @@ cp .env.example .env
 mkdir -p secrets
 python -c "import secrets; print(secrets.token_urlsafe(64))" > secrets/django_secret_key
 python -c "import secrets; print(secrets.token_urlsafe(48))" > secrets/postgres_password
-chmod 600 .env secrets/django_secret_key secrets/postgres_password
+chmod 600 .env
+sudo chgrp 20001 secrets/django_secret_key secrets/postgres_password
+chmod 640 secrets/django_secret_key secrets/postgres_password
 ```
+
+The numeric group must match `APP_SECRET_GID` in `.env`. Docker Compose grants
+that supplementary group to the non-root web process, allowing it to read the
+mounted secret files without making those files world-readable or running the
+application as root.
 
 Validate, build, migrate, and start the stack:
 
