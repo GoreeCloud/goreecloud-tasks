@@ -138,6 +138,14 @@ Authenticated users receive a Notifications area for:
 
 Task lists provide a `Remind me` shortcut that opens the Notifications page with the selected task prefilled. The default reminder time uses the user's configured lead time before the task due time, or a short future fallback when a useful pre-due time cannot be selected.
 
+## Data portability
+
+The current `goreecloud.tasks.export` schema version is 2.
+
+Schema-v2 user archives preserve the user's notification preferences and reminders only when the referenced task is already inside that user's existing user-archive ownership scope. A reminder attached only to another owner's shared project is excluded rather than widening the archive to include content the user does not own. Project archives do not contain private user notification state.
+
+The generated ntfy topic may be preserved as application configuration, but publisher credentials and other reusable secrets are never exported. Schema-v1 user archives remain restorable for their original core-data scope and contain no reminder/notification state.
+
 ## Testing boundary
 
 Regression coverage verifies:
@@ -154,18 +162,21 @@ Regression coverage verifies:
 - re-checking shared-task authorization immediately before dispatch;
 - disabled delivery preferences;
 - authenticated ntfy publication;
-- message data minimization; and
-- safe retry state after publication failure.
+- message data minimization;
+- safe retry state after publication failure; and
+- schema-v2 notification/reminder export and guarded restoration.
 
-GitHub Actions continues to validate migration drift, the complete Django test suite, the Docker image, PostgreSQL-backed migrations, Docker Compose startup, and the live health endpoint.
+GitHub Actions additionally runs an isolated live integration test against a disposable authenticated ntfy server. That test exercises the real GoreeCloud Tasks HTTP publisher and verifies the intended write-only publisher/read-only exact-subscriber ACL boundary, unauthorized denial, namespace isolation, and delivered-message minimization.
+
+See `docs/ntfy-provisioning-validation.md` for the reviewed production provisioning workflow, token rotation/revocation procedure, and exact isolated validation design.
 
 ## Current limitations and production boundary
 
-This increment does **not**:
+This development state does **not**:
 
-- create a real ntfy service identity or token;
-- create ntfy ACLs for `goreecloud-tasks-*`;
-- subscribe a user or device to a generated topic;
+- create the real GoreeCloud Tasks ntfy service identity or token;
+- create production ntfy ACLs for `goreecloud-tasks-*`;
+- subscribe a production user or device to a generated topic;
 - create or modify Vaultwarden credentials;
 - create a production scheduler;
 - deploy GoreeCloud Tasks;
@@ -174,6 +185,6 @@ This increment does **not**:
 - make ntfy a permanent reminder history or audit record; or
 - satisfy the production backup, restoration, monitoring, upgrade, rollback, or multi-user acceptance gates.
 
-The current schema-v1 GoreeCloud Tasks data-portability archive also predates this reminder model. Reminder and notification-preference export/restoration must be designed explicitly before those records are claimed as part of portable recovery.
+The repository now continuously validates the application-to-ntfy publisher and ACL model against a disposable ntfy instance. That evidence does not authorize or replace the separate production provisioning and end-client validation steps.
 
 Production enablement requires a separate approved provisioning and validation step for the dedicated ntfy publisher identity, per-user subscriber ACLs, protected token storage, scheduler execution, end-to-end delivery, failure handling, monitoring, backup/recovery implications, and documentation.
