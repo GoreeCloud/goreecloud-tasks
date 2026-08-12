@@ -24,12 +24,13 @@ def settings_view(request):
         action = request.POST.get("action", "preferences")
         if action == "create_reminder":
             reminder_form = ReminderCreateForm(request.POST, user=request.user)
+            reminder_valid = reminder_form.is_valid()
             if not preference.reminders_enabled:
                 reminder_form.add_error(
                     None,
                     "Task reminders are disabled in your notification preferences.",
                 )
-            elif reminder_form.is_valid():
+            elif reminder_valid:
                 reminder_form.save()
                 messages.success(request, "Private reminder scheduled.")
                 return redirect("notifications:settings")
