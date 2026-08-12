@@ -32,10 +32,8 @@
             {% endif %}
             <div class="task-content">
               <div class="task-title-line">
-                {% if task.user_can_edit %}
-                  <a class="task-title" href="{% url 'tasks:task_edit' task.pk %}">{{ task.title }}</a>
-                {% else %}
-                  <strong class="task-title">{{ task.title }}</strong>
+                <a class="task-title" href="{% url 'tasks:task_detail' task.pk %}">{{ task.title }}</a>
+                {% if not task.user_can_edit %}
                   <span class="read-only-badge">Read only</span>
                 {% endif %}
               </div>

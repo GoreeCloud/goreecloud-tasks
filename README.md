@@ -7,10 +7,11 @@ family, collaborative, and GoreeCloud operational work.
 
 **v0.1 development. Production deployment is not yet approved.**
 
-The current implementation establishes the multi-user security boundary, the
-first usable task workflows, and the first complete project and membership
-management interface. Production publication remains blocked on the broader v0.1
-acceptance requirements, including backup and restoration testing.
+The current implementation establishes the multi-user security boundary, usable
+task workflows, project and membership management, and attributable task
+comments and material activity history. Production publication remains blocked
+on the broader v0.1 acceptance requirements, including backup and restoration
+testing.
 
 ## Implemented Foundation
 
@@ -34,6 +35,10 @@ acceptance requirements, including backup and restoration testing.
 - Project-aware Quick Add limited to projects the current user may edit.
 - Project-aware full task creation with authorized project preselection.
 - Read-only presentation for tasks visible through Viewer membership.
+- Authorized task detail pages with task-scoped comments and activity.
+- User-attributed comments for users with task edit access.
+- Material task and project activity events with the acting user recorded.
+- Project activity history for sharing and membership changes.
 - Django admin limited to account administration; private task/project content
   is not registered there.
 - PostgreSQL-ready application configuration with SQLite for isolated tests.
@@ -133,6 +138,7 @@ After signing in, the application provides:
 - **Full editor** for title, description, project, assignee, priority, status, and
   optional due date/time.
 - **Completion controls** for completing and reopening editable tasks.
+- **Task detail** for authorized readers, with discussion and activity history.
 
 Shared-project Viewer membership remains read-only. Manager and Member roles may
 modify shared project work according to the project authorization boundary.
@@ -161,6 +167,31 @@ Existing tasks may retain a removed collaborator as their historical creator or
 assignee so that ordinary task updates and completion do not fail after access is
 revoked. New assignments still require the project owner or an active member.
 
+## Comments and Activity
+
+Collaboration is deliberately scoped to content the user can already access:
+
+- **Task comments** are visible with the task and are attributed to the author.
+- **Comment creation** requires task edit access. Viewer membership remains
+  read-only and cannot post comments.
+- **Task activity** records creation, material edits, completion, reopening,
+  deletion, and comment creation.
+- **Project activity** records project creation/settings changes, sharing
+  revocation, membership additions, role changes, removals, and project-scoped
+  task events.
+- **Material history only** is recorded; page views and low-value interaction
+  telemetry are not written to the activity stream.
+- **Sensitive-data minimization** keeps task descriptions and comment bodies out
+  of activity metadata. Edit events store changed field names rather than copies
+  of field content.
+- **Access revocation applies to history**. A removed project member loses future
+  access to the project's task comments and activity along with the underlying
+  project/task content.
+
+The v0.1 interface creates comments but does not yet provide comment edit/delete
+controls. Activity events are presented as attributable history, not as a
+general-purpose analytics or surveillance log.
+
 ## Tests
 
 Run the local checks with:
@@ -176,8 +207,9 @@ user boundaries, explicit shared membership, Viewer read-only behavior,
 deactivated memberships, administrator separation, assignment constraints,
 Quick Add authorization, task mutation authorization, Today/Upcoming visibility,
 project-list boundaries, owner-only project settings, explicit sharing, role
-changes, membership revocation, and historical task behavior after access is
-revoked.
+changes, membership revocation, historical task behavior after access is
+revoked, comment authorization, comment output escaping, activity attribution,
+project-history visibility, and history isolation after access revocation.
 
 GitHub Actions additionally builds and starts the Docker Compose development
 stack with PostgreSQL, applies migrations, and verifies the live health endpoint.
@@ -190,6 +222,7 @@ goreecloud-tasks/
 ├── accounts/           # Individual user identity and preferences
 ├── projects/           # Project ownership, memberships, roles, forms, and views
 ├── tasks/              # Core task models, forms, views, and authorization
+├── collaboration/      # Task comments and attributable material activity
 ├── templates/          # Server-rendered application templates
 ├── static/             # CSS and future client-side assets
 ├── tests/              # Functional and authorization tests
@@ -202,9 +235,9 @@ goreecloud-tasks/
 └── manage.py
 ```
 
-Additional apps and capabilities such as labels, subtasks, activity history,
-comments, imports, integrations, reminders, and the public application API will
-be introduced only when their milestone requires them.
+Additional capabilities such as labels, subtasks, search, imports, integrations,
+reminders, and the public application API will be introduced only when their
+milestone requires them.
 
 ## Production Boundary
 

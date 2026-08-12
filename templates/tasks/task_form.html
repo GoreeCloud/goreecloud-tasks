@@ -9,10 +9,14 @@
   <section class="task-panel">
     <header class="panel-heading">
       <div>
-        <p class="eyebrow">{% if task %}Task detail{% else %}Create work{% endif %}</p>
+        <p class="eyebrow">{% if task %}Task editor{% else %}Create work{% endif %}</p>
         <h1>{% if task %}Edit task{% else %}New task{% endif %}</h1>
       </div>
-      <a class="secondary-link" href="{% url 'tasks:dashboard' %}">Back to Inbox</a>
+      {% if task %}
+        <a class="secondary-link" href="{% url 'tasks:task_detail' task.pk %}">View task</a>
+      {% else %}
+        <a class="secondary-link" href="{% url 'tasks:dashboard' %}">Back to Inbox</a>
+      {% endif %}
     </header>
 
     <form class="task-editor" method="post">
@@ -37,7 +41,7 @@
       <div class="danger-zone">
         <div>
           <strong>Delete task</strong>
-          <p>This permanently removes this task from GoreeCloud Tasks.</p>
+          <p>This permanently removes this task from GoreeCloud Tasks. Material project activity remains attributable after deletion.</p>
         </div>
         <form method="post" action="{% url 'tasks:task_delete' task.pk %}">
           {% csrf_token %}

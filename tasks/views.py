@@ -7,11 +7,25 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
+from collaboration.forms import TaskCommentForm
+from collaboration.models import ActivityEvent
+from collaboration.services import record_activity
+
 from .forms import QuickAddForm, TaskForm, editable_projects_for
 from .models import Task
 
 
 TERMINAL_STATUSES = [Task.Status.COMPLETED, Task.Status.CANCELLED]
+
+TASK_ACTIVITY_FIELDS = (
+    ("title", "title"),
+    ("description", "description"),
+    ("project_id", "project"),
+    ("assignee_id", "assignee"),
+    ("priority", "priority"),
+    ("status", "status"),
+    ("due_at", "due date"),
+)
 
 
 def _active_tasks(user):
@@ -58,6 +72,57 @@ def _safe_redirect_back(request):
     if next_path.startswith("/") and not next_path.startswith("//"):
         return redirect(next_path)
     return redirect("tasks:dashboard")
+
+
+def _task_snapshot(task):
+    """Capture only fields used to decide whether an edit is material."""
+    return {field_name: getattr(task, field_name) for field_name, _ in TASK_ACTIVITY_FIELDS}
+
+
+def _changed_task_fields(before, task):
+    """Return stable field keys and user-facing labels changed by an edit."""
+    changed = []
+    for field_name, label in TASK_ACTIVITY_FIELDS:
+        if before[field_name] != getattr(task, field_name):
+            changed.append((field_name, label))
+    return changed
+
+
+def _record_task_edit_activity(request, task, before):
+    """Record one attributable event for a material full-editor change."""
+    changed = _changed_task_fields(before, task)
+    if not changed:
+        return
+
+    changed_keys = [field_name for field_name, _ in changed]
+    changed_labels = [label for _, label in changed]
+
+    if changed_keys == ["status"] and task.status == Task.Status.COMPLETED:
+        kind = ActivityEvent.Kind.TASK_COMPLETED
+        summary = "completed the task"
+    elif (
+        changed_keys == ["status"]
+        and before["status"] == Task.Status.COMPLETED
+        and task.status != Task.Status.COMPLETED
+    ):
+        kind = ActivityEvent.Kind.TASK_REOPENED
+        summary = "reopened the task"
+    else:
+        kind = ActivityEvent.Kind.TASK_UPDATED
+        if len(changed_labels) == 1:
+            summary = f"updated the task {changed_labels[0]}"
+        elif len(changed_labels) == 2:
+            summary = f"updated {changed_labels[0]} and {changed_labels[1]}"
+        else:
+            summary = "updated " + ", ".join(changed_labels[:-1]) + f", and {changed_labels[-1]}"
+
+    record_activity(
+        actor=request.user,
+        kind=kind,
+        summary=summary,
+        task=task,
+        details={"fields": changed_keys},
+    )
 
 
 @login_required
@@ -109,6 +174,34 @@ def upcoming(request):
 
 
 @login_required
+def task_detail(request, pk):
+    """Show task content, comments, and material history to authorized readers."""
+    task = get_object_or_404(
+        Task.objects.visible_to(request.user).select_related(
+            "project",
+            "project__owner",
+            "creator",
+            "assignee",
+        ),
+        pk=pk,
+    )
+    can_edit = Task.objects.editable_by(request.user).filter(pk=task.pk).exists()
+
+    return render(
+        request,
+        "tasks/task_detail.html",
+        {
+            "task": task,
+            "comments": task.comments.select_related("author").all(),
+            "activity_events": task.activity_events.select_related("actor").all()[:100],
+            "comment_form": TaskCommentForm(),
+            "user_can_edit": can_edit,
+            "active_view": "",
+        },
+    )
+
+
+@login_required
 @require_POST
 def quick_add(request):
     """Capture a task quickly into Inbox or an editable project."""
@@ -122,6 +215,14 @@ def quick_add(request):
     task.assignee = request.user
     task.status = Task.Status.READY
     task.save()
+
+    record_activity(
+        actor=request.user,
+        kind=ActivityEvent.Kind.TASK_CREATED,
+        summary="created the task",
+        task=task,
+        details={"source": "quick_add"},
+    )
     messages.success(request, "Task added.")
     return _safe_redirect_back(request)
 
@@ -137,6 +238,14 @@ def task_create(request):
             if task.assignee_id is None:
                 task.assignee = request.user
             task.save()
+
+            record_activity(
+                actor=request.user,
+                kind=ActivityEvent.Kind.TASK_CREATED,
+                summary="created the task",
+                task=task,
+                details={"source": "full_editor"},
+            )
             messages.success(request, "Task created.")
             return redirect("tasks:task_edit", pk=task.pk)
     else:
@@ -159,13 +268,16 @@ def task_create(request):
 def task_edit(request, pk):
     """Edit a task only when the normal application authorization permits it."""
     task = get_object_or_404(
-        Task.objects.editable_by(request.user).select_related("project"), pk=pk
+        Task.objects.editable_by(request.user).select_related("project"),
+        pk=pk,
     )
 
     if request.method == "POST":
+        before = _task_snapshot(task)
         form = TaskForm(request.POST, instance=task, user=request.user)
         if form.is_valid():
-            form.save()
+            task = form.save()
+            _record_task_edit_activity(request, task, before)
             messages.success(request, "Task updated.")
             return redirect("tasks:task_edit", pk=task.pk)
     else:
@@ -181,23 +293,51 @@ def task_edit(request, pk):
 @login_required
 @require_POST
 def task_toggle_complete(request, pk):
-    """Complete or reopen an editable task."""
-    task = get_object_or_404(Task.objects.editable_by(request.user), pk=pk)
+    """Complete or reopen an editable task and retain an attributable event."""
+    task = get_object_or_404(
+        Task.objects.editable_by(request.user).select_related("project"),
+        pk=pk,
+    )
     if task.status == Task.Status.COMPLETED:
         task.status = Task.Status.READY
+        kind = ActivityEvent.Kind.TASK_REOPENED
+        summary = "reopened the task"
         messages.success(request, "Task reopened.")
     else:
         task.status = Task.Status.COMPLETED
+        kind = ActivityEvent.Kind.TASK_COMPLETED
+        summary = "completed the task"
         messages.success(request, "Task completed.")
+
     task.save(update_fields=["status", "completed_at", "updated_at"])
+    record_activity(
+        actor=request.user,
+        kind=kind,
+        summary=summary,
+        task=task,
+    )
     return _safe_redirect_back(request)
 
 
 @login_required
 @require_POST
 def task_delete(request, pk):
-    """Delete an editable task after an explicit POST action."""
-    task = get_object_or_404(Task.objects.editable_by(request.user), pk=pk)
+    """Delete an editable task after retaining material project history."""
+    task = get_object_or_404(
+        Task.objects.editable_by(request.user).select_related("project"),
+        pk=pk,
+    )
+    task_id = task.pk
+    task_title = task.title
+    activity_title = task_title if len(task_title) <= 440 else task_title[:437] + "…"
+
+    record_activity(
+        actor=request.user,
+        kind=ActivityEvent.Kind.TASK_DELETED,
+        summary=f'deleted task “{activity_title}”',
+        task=task,
+        details={"deleted_task_id": task_id},
+    )
     task.delete()
     messages.success(request, "Task deleted.")
     return redirect("tasks:dashboard")

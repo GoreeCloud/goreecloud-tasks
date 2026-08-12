@@ -8,6 +8,8 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from collaboration.models import ActivityEvent
+from collaboration.services import record_activity
 from tasks.models import Task
 
 from .forms import MembershipInviteForm, MembershipRoleForm, ProjectForm
@@ -75,6 +77,7 @@ def _project_detail_context(request, project, membership_form=None):
         "memberships": memberships,
         "membership_form": membership_form or MembershipInviteForm(project=project),
         "role_choices": ProjectMembership.Role.choices,
+        "activity_events": project.activity_events.select_related("actor").all()[:100],
         "active_view": "projects",
         "user_is_owner": project.owner_id == request.user.id,
         "user_can_edit_tasks": can_edit_tasks,
@@ -104,7 +107,7 @@ def project_list(request):
 
 @login_required
 def project_detail(request, pk):
-    """Show accessible project work and membership context."""
+    """Show accessible project work, membership, and material history."""
     project = _visible_project_or_404(request.user, pk)
     return render(
         request,
@@ -122,6 +125,12 @@ def project_create(request):
             project = form.save(commit=False)
             project.owner = request.user
             project.save()
+            record_activity(
+                actor=request.user,
+                kind=ActivityEvent.Kind.PROJECT_CREATED,
+                summary="created the project",
+                project=project,
+            )
             messages.success(request, "Project created.")
             return redirect("projects:detail", pk=project.pk)
     else:
@@ -141,14 +150,35 @@ def project_create(request):
 @login_required
 @transaction.atomic
 def project_edit(request, pk):
-    """Edit owner-controlled project settings."""
+    """Edit owner-controlled project settings and record material changes."""
     project = _owned_project_or_404(request.user, pk)
+    previous_name = project.name
     previous_visibility = project.visibility
 
     if request.method == "POST":
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
             project = form.save()
+
+            changed_fields = []
+            if previous_name != project.name:
+                changed_fields.append("name")
+            if previous_visibility != project.visibility:
+                changed_fields.append("visibility")
+
+            if changed_fields:
+                if len(changed_fields) == 1:
+                    summary = f"updated the project {changed_fields[0]}"
+                else:
+                    summary = "updated the project name and visibility"
+                record_activity(
+                    actor=request.user,
+                    kind=ActivityEvent.Kind.PROJECT_UPDATED,
+                    summary=summary,
+                    project=project,
+                    details={"fields": changed_fields},
+                )
+
             if (
                 previous_visibility == Project.Visibility.SHARED
                 and project.visibility == Project.Visibility.PRIVATE
@@ -157,6 +187,17 @@ def project_edit(request, pk):
                     is_active=False
                 )
                 if deactivated:
+                    record_activity(
+                        actor=request.user,
+                        kind=ActivityEvent.Kind.PROJECT_SHARING_REVOKED,
+                        summary=(
+                            f"made the project private and revoked "
+                            f"{deactivated} active membership"
+                            f"{'' if deactivated == 1 else 's'}"
+                        ),
+                        project=project,
+                        details={"revoked_memberships": deactivated},
+                    )
                     messages.info(
                         request,
                         "Project sharing was disabled and active memberships were revoked.",
@@ -208,12 +249,27 @@ def membership_add(request, pk):
         membership.is_active = True
         membership.save(update_fields=["role", "is_active"])
 
+    record_activity(
+        actor=request.user,
+        kind=ActivityEvent.Kind.MEMBER_ADDED,
+        summary=(
+            f"{'added' if created else 'restored'} "
+            f"{user.preferred_name} as {membership.get_role_display()}"
+        ),
+        project=project,
+        details={
+            "subject_user_id": user.pk,
+            "role": membership.role,
+            "reactivated": not created,
+        },
+    )
     messages.success(request, f"{user.preferred_name} was added to the project.")
     return redirect("projects:detail", pk=project.pk)
 
 
 @login_required
 @require_POST
+@transaction.atomic
 def membership_role_update(request, pk, membership_pk):
     """Change an active member role; project owner only."""
     project = _owned_project_or_404(request.user, pk)
@@ -222,9 +278,26 @@ def membership_role_update(request, pk, membership_pk):
         pk=membership_pk,
         is_active=True,
     )
+    previous_role = membership.role
     form = MembershipRoleForm(request.POST, instance=membership)
     if form.is_valid():
-        form.save()
+        membership = form.save()
+        if membership.role != previous_role:
+            previous_label = ProjectMembership.Role(previous_role).label
+            record_activity(
+                actor=request.user,
+                kind=ActivityEvent.Kind.MEMBER_ROLE_CHANGED,
+                summary=(
+                    f"changed {membership.user.preferred_name}'s role "
+                    f"from {previous_label} to {membership.get_role_display()}"
+                ),
+                project=project,
+                details={
+                    "subject_user_id": membership.user_id,
+                    "from_role": previous_role,
+                    "to_role": membership.role,
+                },
+            )
         messages.success(
             request,
             f"{membership.user.preferred_name}'s role was updated.",
@@ -236,6 +309,7 @@ def membership_role_update(request, pk, membership_pk):
 
 @login_required
 @require_POST
+@transaction.atomic
 def membership_remove(request, pk, membership_pk):
     """Revoke future project access without deleting membership history."""
     project = _owned_project_or_404(request.user, pk)
@@ -244,10 +318,24 @@ def membership_remove(request, pk, membership_pk):
         pk=membership_pk,
         is_active=True,
     )
+    removed_user_id = membership.user_id
+    removed_name = membership.user.preferred_name
+    removed_role = membership.role
+
     membership.is_active = False
     membership.save(update_fields=["is_active"])
+    record_activity(
+        actor=request.user,
+        kind=ActivityEvent.Kind.MEMBER_REMOVED,
+        summary=f"removed {removed_name} from the project",
+        project=project,
+        details={
+            "subject_user_id": removed_user_id,
+            "previous_role": removed_role,
+        },
+    )
     messages.success(
         request,
-        f"{membership.user.preferred_name} no longer has project access.",
+        f"{removed_name} no longer has project access.",
     )
     return redirect("projects:detail", pk=project.pk)
