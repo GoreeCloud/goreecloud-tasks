@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import secrets
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.utils import timezone
 
 from tasks.models import Task
+
+from .config import ManagerAPIConfiguration, load_manager_api_configuration
 
 SCHEMA = "goreecloud.tasks.manager.v1"
 
@@ -27,22 +28,30 @@ def _authentication_failure() -> JsonResponse:
     return response
 
 
-def _configured_identity(request):
+def _configuration_failure() -> JsonResponse:
+    response = JsonResponse(
+        {"detail": "Integration configuration is unavailable."},
+        status=503,
+    )
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+def _configured_identity(request, config: ManagerAPIConfiguration):
     authorization = request.headers.get("Authorization", "")
     scheme, separator, supplied_token = authorization.partition(" ")
     if not separator or scheme.casefold() != "bearer" or not supplied_token.strip():
         return None
 
-    configured_token = settings.TASKS_MANAGER_API_TOKEN
-    if not configured_token or not secrets.compare_digest(
-        supplied_token.strip(), configured_token
+    if not config.token or not secrets.compare_digest(
+        supplied_token.strip(), config.token
     ):
         return None
 
     return (
         get_user_model()
         .objects.filter(
-            username=settings.TASKS_MANAGER_API_USERNAME,
+            username=config.username,
             is_active=True,
         )
         .first()
@@ -94,15 +103,18 @@ def manager_operational_tasks(request):
     account details, notification state, or any write operation.
     """
 
-    if not settings.TASKS_MANAGER_API_ENABLED:
+    config = load_manager_api_configuration()
+    if not config.enabled:
         return JsonResponse({"detail": "Not found."}, status=404)
+    if config.error:
+        return _configuration_failure()
 
     if request.method != "GET":
         response = HttpResponseNotAllowed(["GET"])
         response["Cache-Control"] = "private, no-store"
         return response
 
-    identity = _configured_identity(request)
+    identity = _configured_identity(request, config)
     if identity is None:
         return _authentication_failure()
 
@@ -122,7 +134,7 @@ def manager_operational_tasks(request):
     blocked = queryset.filter(status=Task.Status.BLOCKED).count()
     p0 = queryset.filter(priority=Task.Priority.P0_CRITICAL).count()
     p1 = queryset.filter(priority=Task.Priority.P1_URGENT).count()
-    tasks = tuple(queryset[: settings.TASKS_MANAGER_API_MAX_TASKS])
+    tasks = tuple(queryset[: config.max_tasks])
 
     response = JsonResponse(
         {
