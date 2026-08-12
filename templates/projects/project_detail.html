@@ -65,10 +65,8 @@
               {% endif %}
               <div class="task-content">
                 <div class="task-title-line">
-                  {% if task.user_can_edit %}
-                    <a class="task-title" href="{% url 'tasks:task_edit' task.pk %}">{{ task.title }}</a>
-                  {% else %}
-                    <strong class="task-title">{{ task.title }}</strong>
+                  <a class="task-title" href="{% url 'tasks:task_detail' task.pk %}">{{ task.title }}</a>
+                  {% if not task.user_can_edit %}
                     <span class="read-only-badge">Read only</span>
                   {% endif %}
                 </div>
@@ -166,6 +164,31 @@
             This project is private. Change its visibility to Shared before adding collaborators; sharing is never enabled automatically.
           </div>
         {% endif %}
+      {% endif %}
+    </section>
+
+    <section class="project-section" aria-labelledby="project-activity-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">History</p>
+          <h2 id="project-activity-heading">Project activity</h2>
+        </div>
+      </div>
+
+      {% if activity_events %}
+        <ol class="activity-list project-activity-list">
+          {% for event in activity_events %}
+            <li class="activity-item">
+              <div class="activity-copy">
+                <strong>{{ event.actor.preferred_name }}</strong>
+                <span>{{ event.summary }}.</span>
+              </div>
+              <time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"M j, Y g:i A" }}</time>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="muted-copy">No material project activity has been recorded yet.</p>
       {% endif %}
     </section>
   </section>

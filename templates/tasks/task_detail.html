@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel">
+    <header class="panel-heading task-detail-heading">
+      <div>
+        <p class="eyebrow">{% if task.project %}{{ task.project.name }}{% else %}Private personal task{% endif %}</p>
+        <h1>{{ task.title }}</h1>
+      </div>
+      <div class="heading-actions">
+        {% if user_can_edit %}
+          <a class="primary-button compact" href="{% url 'tasks:task_edit' task.pk %}">Edit task</a>
+        {% else %}
+          <span class="read-only-badge">Read only</span>
+        {% endif %}
+        {% if task.project %}
+          <a class="secondary-button" href="{% url 'projects:detail' task.project.pk %}">Back to project</a>
+        {% else %}
+          <a class="secondary-button" href="{% url 'tasks:dashboard' %}">Back to Inbox</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <div class="task-summary-grid">
+      <div>
+        <span class="summary-label">Priority</span>
+        <strong>{{ task.get_priority_display }}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Status</span>
+        <strong>{{ task.get_status_display }}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Assignee</span>
+        <strong>{% if task.assignee %}{{ task.assignee.preferred_name }}{% else %}Unassigned{% endif %}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Due</span>
+        <strong>{% if task.due_at %}{{ task.due_at|date:"M j, Y g:i A" }}{% else %}No due date{% endif %}</strong>
+      </div>
+    </div>
+
+    {% if task.description %}
+      <section class="detail-section" aria-labelledby="task-description-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Details</p>
+            <h2 id="task-description-heading">Description</h2>
+          </div>
+        </div>
+        <div class="task-description-full">{{ task.description|linebreaksbr }}</div>
+      </section>
+    {% endif %}
+
+    <div class="collaboration-grid">
+      <section class="detail-section collaboration-section" aria-labelledby="comments-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Discussion</p>
+            <h2 id="comments-heading">Comments</h2>
+          </div>
+          <span class="count">{{ comments|length }}</span>
+        </div>
+
+        {% if comments %}
+          <div class="comment-list">
+            {% for comment in comments %}
+              <article class="comment-card">
+                <div class="comment-meta">
+                  <strong>{{ comment.author.preferred_name }}</strong>
+                  <span>@{{ comment.author.username }}</span>
+                  <time datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:"M j, Y g:i A" }}</time>
+                </div>
+                <div class="comment-body">{{ comment.body|linebreaksbr }}</div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted-copy">No comments yet.</p>
+        {% endif %}
+
+        {% if user_can_edit %}
+          <form class="comment-form" method="post" action="{% url 'tasks:task_comment_add' task.pk %}">
+            {% csrf_token %}
+            {{ comment_form.body }}
+            <div class="comment-form-actions">
+              <small>Comments are attributed to your account and included in task activity.</small>
+              <button class="primary-button compact" type="submit">Post comment</button>
+            </div>
+          </form>
+        {% else %}
+          <div class="read-only-note">
+            Your project role allows you to read this discussion, but not add comments.
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="detail-section collaboration-section" aria-labelledby="activity-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">History</p>
+            <h2 id="activity-heading">Activity</h2>
+          </div>
+        </div>
+
+        {% if activity_events %}
+          <ol class="activity-list">
+            {% for event in activity_events %}
+              <li class="activity-item">
+                <div class="activity-copy">
+                  <strong>{{ event.actor.preferred_name }}</strong>
+                  <span>{{ event.summary }}.</span>
+                </div>
+                <time datetime="{{ event.created_at|date:'c' }}">{{ event.created_at|date:"M j, Y g:i A" }}</time>
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p class="muted-copy">No material activity has been recorded yet.</p>
+        {% endif %}
+      </section>
+    </div>
+  </section>
+</div>
+{% endblock %}
