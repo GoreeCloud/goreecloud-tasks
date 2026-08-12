@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel notifications-panel">
+    <header class="panel-heading">
+      <div>
+        <p class="eyebrow">Private user settings</p>
+        <h1>Notifications</h1>
+      </div>
+    </header>
+
+    <div class="notification-grid">
+      <section class="notification-card" aria-labelledby="preference-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Defaults</p>
+            <h2 id="preference-heading">Reminder preferences</h2>
+          </div>
+        </div>
+        <form class="notification-form" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="preferences">
+          {{ form.non_field_errors }}
+          <label class="checkbox-field">
+            {{ form.reminders_enabled }}
+            <span><strong>{{ form.reminders_enabled.label }}</strong><small>Disabling reminders pauses future notification delivery without deleting your scheduled reminder records.</small></span>
+          </label>
+          <label class="field-group">
+            <span>{{ form.default_lead_minutes.label }}</span>
+            {{ form.default_lead_minutes }}
+            <small>{{ form.default_lead_minutes.help_text }}</small>
+            {{ form.default_lead_minutes.errors }}
+          </label>
+          <label class="field-group">
+            <span>{{ form.timezone_name.label }}</span>
+            {{ form.timezone_name }}
+            <small>{{ form.timezone_name.help_text }}</small>
+            {{ form.timezone_name.errors }}
+          </label>
+          <label class="checkbox-field">
+            {{ form.ntfy_enabled }}
+            <span><strong>{{ form.ntfy_enabled.label }}</strong><small>{{ form.ntfy_enabled.help_text }}</small></span>
+          </label>
+          <button class="primary-button" type="submit">Save notification preferences</button>
+        </form>
+      </section>
+
+      <section class="notification-card" aria-labelledby="ntfy-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Self-hosted delivery</p>
+            <h2 id="ntfy-heading">ntfy destination</h2>
+          </div>
+        </div>
+        <dl class="notification-status-list">
+          <div><dt>Application publisher</dt><dd>{% if ntfy_configured %}<span class="status-good">Configured</span>{% else %}<span class="status-muted">Not configured</span>{% endif %}</dd></div>
+          <div><dt>Your topic</dt><dd><code>{{ preference.ntfy_topic }}</code></dd></div>
+        </dl>
+        <p class="muted-copy">Your topic is generated without your username or email address. It is not a credential. The ntfy server must still grant your ntfy identity read-only access to this exact topic and grant the dedicated GoreeCloud Tasks service identity write-only access to the approved Tasks topic namespace.</p>
+        <p class="muted-copy">GoreeCloud Tasks stores no ntfy user password or subscription token. The application publisher token is deployment configuration and is never shown on this page.</p>
+      </section>
+    </div>
+
+    <section class="detail-section reminder-scheduler" aria-labelledby="schedule-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Personal schedule</p>
+          <h2 id="schedule-heading">Schedule a reminder</h2>
+        </div>
+      </div>
+      <p class="muted-copy">A reminder belongs only to your account. You may schedule one for a shared task you can read even when your project role is read-only; other project members do not see your reminder.</p>
+      <form class="notification-form reminder-create-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_reminder">
+        {{ reminder_form.non_field_errors }}
+        <label class="field-group">
+          <span>{{ reminder_form.task.label }}</span>
+          {{ reminder_form.task }}
+          {{ reminder_form.task.errors }}
+        </label>
+        <label class="field-group">
+          <span>{{ reminder_form.remind_at.label }}</span>
+          {{ reminder_form.remind_at }}
+          {{ reminder_form.remind_at.errors }}
+        </label>
+        <button class="primary-button" type="submit">Schedule private reminder</button>
+      </form>
+    </section>
+
+    <section class="detail-section" aria-labelledby="active-reminders-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Pending delivery</p>
+          <h2 id="active-reminders-heading">Active reminders</h2>
+        </div>
+        <span class="count">{{ active_reminders|length }}</span>
+      </div>
+      {% if active_reminders %}
+        <ul class="reminder-list">
+          {% for reminder in active_reminders %}
+            <li class="reminder-row">
+              <div>
+                <a class="task-title" href="{% url 'tasks:task_detail' reminder.task.pk %}">{{ reminder.task.title }}</a>
+                <div class="task-meta">{{ reminder.delivery_state }} · {{ reminder.remind_at|date:"M j, Y g:i A" }}{% if reminder.task.project %} · {{ reminder.task.project.name }}{% else %} · Private Inbox{% endif %}</div>
+              </div>
+              <form method="post" action="{% url 'notifications:reminder_cancel' reminder.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'notifications:settings' %}">
+                <button class="secondary-button" type="submit">Cancel</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted-copy">You do not have any active reminders for tasks you can currently access.</p>
+      {% endif %}
+    </section>
+
+    <section class="notification-boundary" aria-labelledby="delivery-boundary-heading">
+      <h2 id="delivery-boundary-heading">Delivery boundary</h2>
+      <p>Reminder dispatch re-checks task authorization immediately before publishing. If your access to a shared task has been revoked, the pending reminder is cancelled instead of sending task content after your access ends.</p>
+      <p>Only the task title, due time when present, and project name when present are sent. Descriptions, comments, labels, blockers, recovery notes, related records, and other detailed task content are intentionally excluded from the ntfy message.</p>
+    </section>
+  </section>
+</div>
+{% endblock %}
