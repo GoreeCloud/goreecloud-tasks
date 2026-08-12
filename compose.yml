@@ -43,6 +43,10 @@ services:
     secrets:
       - postgres_password
       - django_secret_key
+    # File-backed Compose secrets retain the source file's numeric group.
+    # Grant the non-root application user that supplementary group only.
+    group_add:
+      - "${APP_SECRET_GID:-20001}"
     depends_on:
       db:
         condition: service_healthy
