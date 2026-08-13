@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 RUN_KEY="${GITHUB_RUN_ID:-local}-$$"
 export COMPOSE_PROJECT_NAME="goreecloud-tasks-runtime-preflight-${RUN_KEY}"
 SECRET_GID=20001
-CI_GROUP_NAME="goreecloud-tasks-ci-${$}"
+CI_GROUP_NAME="goreecloud-tasks-ci-$$"
 WORK_DIR="$(mktemp -d)"
 CREATED_GROUP=false
 CREATED_ENV=false
