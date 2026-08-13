@@ -1,0 +1,20 @@
+name: Backup Operations Readiness
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backup-operations-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Validate backup operations readiness
+        run: bash scripts/validate_backup_operations_readiness.sh
