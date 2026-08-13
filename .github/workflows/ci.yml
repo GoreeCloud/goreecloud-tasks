@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: GoreeCloud/goreecloud-manager
-          ref: 6290203c6793cb4dd497b5d4481e226344c55eab
+          ref: 863716464f1cf0466ec2208df23d59f30febfa28
           path: manager-source
           persist-credentials: false
 
