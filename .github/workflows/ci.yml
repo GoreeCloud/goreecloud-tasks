@@ -128,6 +128,23 @@ jobs:
       - name: Validate disposable PostgreSQL backup and restoration
         run: bash scripts/validate_backup_restore.sh
 
+  upgrade-rollback:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out exact candidate revision with full history
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate disposable upgrade and backup-backed rollback
+        env:
+          UPGRADE_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          UPGRADE_TARGET_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/validate_upgrade_rollback.sh
+
   docker-compose:
     runs-on: ubuntu-latest
 
