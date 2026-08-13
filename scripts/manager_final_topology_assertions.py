@@ -3,8 +3,8 @@
 
 The script runs inside the GoreeCloud Manager container. It exercises Manager's real
 ``integrations.tasks`` adapter over the dedicated ``manager-tasks`` Docker network and
-checks the authenticated Manager Tasks page without publishing either application to a host
-port.
+checks the authenticated Manager Tasks page and sanitized integration-monitoring signal
+without publishing either application to a host port.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ INTEGRATION_USERNAME = "goreecloud-manager-integration"
 VISIBLE_TASK_TITLE = "Validate Manager cross-application recovery visibility"
 SENSITIVE_DESCRIPTION = "MANAGER-E2E-SENSITIVE-DESCRIPTION-MUST-NOT-LEAK"
 SENSITIVE_COMMENT = "MANAGER-E2E-SENSITIVE-COMMENT-MUST-NOT-LEAK"
+MONITOR_PATH = "/healthz/integrations/tasks/"
 FORBIDDEN_TITLES = (
     "Manager E2E ordinary shared task",
     "Manager E2E private operational task",
@@ -84,22 +85,7 @@ def _raw_payload() -> tuple[httpx.Response, dict]:
     return response, response.json()
 
 
-def _assert_manager_health() -> None:
-    response = httpx.get("http://127.0.0.1:8000/healthz/", timeout=5.0)
-    assert response.status_code == 200, response.text
-    assert response.json() == {"status": "ok", "service": "goreecloud-manager"}
-
-
-def _assert_manager_web(*, expect_task: bool) -> None:
-    """Render Manager's authenticated Tasks view with production cookie settings intact.
-
-    Manager intentionally marks session and CSRF cookies Secure whenever DEBUG is false.
-    The disposable container has no TLS listener because HTTPS termination belongs to Caddy,
-    so an ordinary loopback HTTP login would correctly refuse to send the Secure CSRF cookie.
-    Django's test client lets this gate exercise the authenticated view as an HTTPS request
-    without weakening the production-pattern Manager settings or publishing a host port.
-    """
-
+def _django_client():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "goreecloud_manager.settings")
     import django
 
@@ -107,9 +93,62 @@ def _assert_manager_web(*, expect_task: bool) -> None:
 
     from django.test import Client
 
+    return Client()
+
+
+def _monitor_response():
+    return _django_client().get(MONITOR_PATH, secure=True, HTTP_HOST="127.0.0.1")
+
+
+def _assert_monitor_condition(*, state: str, condition: str, status_code: int, forbidden_token: str) -> None:
+    response = _monitor_response()
+    assert response.status_code == status_code, response.content.decode("utf-8", errors="replace")
+    payload = response.json()
+    assert payload == {
+        "status": "ok" if condition == "healthy" else "unhealthy",
+        "service": "goreecloud-manager",
+        "integration": "goreecloud-tasks",
+        "state": state,
+        "condition": condition,
+    }, payload
+    assert response.headers.get("Cache-Control") == "no-store"
+
+    serialized = json.dumps(payload)
+    for forbidden in (
+        forbidden_token,
+        INTEGRATION_USERNAME,
+        VISIBLE_TASK_TITLE,
+        SENSITIVE_DESCRIPTION,
+        SENSITIVE_COMMENT,
+        *FORBIDDEN_TITLES,
+    ):
+        assert forbidden not in serialized
+    for forbidden_key in (
+        "detail",
+        "tasks",
+        "total_open",
+        "blocked",
+        "p0",
+        "p1",
+        "identity",
+        "observed_at",
+        "token",
+        "secret",
+        "authorization",
+    ):
+        assert forbidden_key not in payload
+
+
+def _assert_manager_health() -> None:
+    response = httpx.get("http://127.0.0.1:8000/healthz/", timeout=5.0)
+    assert response.status_code == 200, response.text
+    assert response.json() == {"status": "ok", "service": "goreecloud-manager"}
+
+
+def _assert_manager_web(*, expect_task: bool) -> None:
     username = os.environ["MANAGER_WEB_USERNAME"]
     password = os.environ["MANAGER_WEB_PASSWORD"]
-    client = Client()
+    client = _django_client()
     assert client.login(username=username, password=password), "Manager CI login failed."
 
     page = client.get("/tasks/", secure=True, HTTP_HOST="127.0.0.1")
@@ -125,14 +164,12 @@ def _assert_manager_web(*, expect_task: bool) -> None:
         assert title not in text
 
 
-def _assert_schema_fail_soft(payload: dict) -> None:
-    invalid = json.loads(json.dumps(payload))
-    invalid["version"] = 999
-    encoded = json.dumps(invalid).encode("utf-8")
+def _serve_response(*, status_code: int, payload: dict | None = None):
+    encoded = json.dumps(payload or {}).encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802 - stdlib callback name
-            self.send_response(200)
+            self.send_response(status_code)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(encoded)))
             self.end_headers()
@@ -144,12 +181,49 @@ def _assert_schema_fail_soft(payload: dict) -> None:
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    return server, thread
+
+
+def _assert_schema_fail_soft(payload: dict, *, forbidden_token: str) -> None:
+    invalid = json.loads(json.dumps(payload))
+    invalid["version"] = 999
+    server, thread = _serve_response(status_code=200, payload=invalid)
     original_url = os.environ["TASKS_API_URL"]
     try:
         os.environ["TASKS_API_URL"] = f"http://127.0.0.1:{server.server_port}"
         snapshot = tasks_snapshot()
         assert snapshot.state == "unavailable", snapshot
+        assert snapshot.condition == "schema-invalid", snapshot
         assert "could not safely interpret" in snapshot.detail
+        _assert_monitor_condition(
+            state="unavailable",
+            condition="schema-invalid",
+            status_code=503,
+            forbidden_token=forbidden_token,
+        )
+        _assert_manager_health()
+    finally:
+        os.environ["TASKS_API_URL"] = original_url
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def _assert_http_fail_soft(*, status_code: int, condition: str, forbidden_token: str) -> None:
+    server, thread = _serve_response(status_code=status_code)
+    original_url = os.environ["TASKS_API_URL"]
+    try:
+        os.environ["TASKS_API_URL"] = f"http://127.0.0.1:{server.server_port}"
+        snapshot = tasks_snapshot()
+        assert snapshot.state == "unavailable", snapshot
+        assert snapshot.condition == condition, snapshot
+        _assert_monitor_condition(
+            state="unavailable",
+            condition=condition,
+            status_code=503,
+            forbidden_token=forbidden_token,
+        )
+        _assert_manager_health()
     finally:
         os.environ["TASKS_API_URL"] = original_url
         server.shutdown()
@@ -162,17 +236,24 @@ def _assert_fail_soft(payload: dict) -> None:
     original_file = os.environ.get("TASKS_ACCESS_TOKEN_FILE", "")
     original_direct = os.environ.get("TASKS_ACCESS_TOKEN")
     original_url = os.environ.get("TASKS_API_URL", "")
+    original_token = Path(original_file).read_text(encoding="utf-8").strip()
 
     try:
         os.environ["TASKS_ENABLED"] = "false"
         disabled = tasks_snapshot()
         assert disabled.state == "disabled", disabled
+        assert disabled.condition == "disabled", disabled
+        _assert_monitor_condition(state="disabled", condition="disabled", status_code=503, forbidden_token=original_token)
+        _assert_manager_health()
 
         os.environ["TASKS_ENABLED"] = "true"
         os.environ["TASKS_ACCESS_TOKEN_FILE"] = "/tmp/manager-final-topology-missing-token"
         missing = tasks_snapshot()
         assert missing.state == "misconfigured", missing
+        assert missing.condition == "misconfigured", missing
         assert "could not be read" in missing.detail
+        _assert_monitor_condition(state="misconfigured", condition="misconfigured", status_code=503, forbidden_token=original_token)
+        _assert_manager_health()
 
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as handle:
             empty_path = handle.name
@@ -180,7 +261,10 @@ def _assert_fail_soft(payload: dict) -> None:
             os.environ["TASKS_ACCESS_TOKEN_FILE"] = empty_path
             empty = tasks_snapshot()
             assert empty.state == "misconfigured", empty
+            assert empty.condition == "misconfigured", empty
             assert "empty" in empty.detail
+            _assert_monitor_condition(state="misconfigured", condition="misconfigured", status_code=503, forbidden_token=original_token)
+            _assert_manager_health()
         finally:
             Path(empty_path).unlink(missing_ok=True)
 
@@ -188,17 +272,26 @@ def _assert_fail_soft(payload: dict) -> None:
         os.environ["TASKS_ACCESS_TOKEN"] = "manager-final-topology-deliberately-wrong-token-value"
         rejected = tasks_snapshot()
         assert rejected.state == "unavailable", rejected
+        assert rejected.condition == "authentication-rejected", rejected
         assert "rejected the configured integration credential" in rejected.detail
+        _assert_monitor_condition(state="unavailable", condition="authentication-rejected", status_code=503, forbidden_token=original_token)
+        _assert_manager_health()
 
         os.environ.pop("TASKS_ACCESS_TOKEN", None)
         os.environ["TASKS_ACCESS_TOKEN_FILE"] = original_file
         os.environ["TASKS_API_URL"] = "http://127.0.0.1:1"
         unavailable = tasks_snapshot()
         assert unavailable.state == "unavailable", unavailable
+        assert unavailable.condition == "unreachable", unavailable
         assert "could not reach" in unavailable.detail or "did not respond" in unavailable.detail
+        _assert_monitor_condition(state="unavailable", condition="unreachable", status_code=503, forbidden_token=original_token)
+        _assert_manager_health()
 
         os.environ["TASKS_API_URL"] = original_url
-        _assert_schema_fail_soft(payload)
+        _assert_http_fail_soft(status_code=403, condition="authorization-denied", forbidden_token=original_token)
+        _assert_http_fail_soft(status_code=404, condition="endpoint-unavailable", forbidden_token=original_token)
+        _assert_http_fail_soft(status_code=500, condition="upstream-error", forbidden_token=original_token)
+        _assert_schema_fail_soft(payload, forbidden_token=original_token)
     finally:
         os.environ["TASKS_ENABLED"] = original_enabled
         os.environ["TASKS_ACCESS_TOKEN_FILE"] = original_file
@@ -212,8 +305,10 @@ def _assert_fail_soft(payload: dict) -> None:
 
 
 def assert_visible(*, include_fail_soft: bool) -> None:
+    token = _token()
     snapshot = tasks_snapshot()
     assert snapshot.state == "healthy", snapshot
+    assert snapshot.condition == "healthy", snapshot
     assert snapshot.identity == INTEGRATION_USERNAME
     assert snapshot.total_open == 1
     assert snapshot.blocked == 1
@@ -222,6 +317,8 @@ def assert_visible(*, include_fail_soft: bool) -> None:
     assert snapshot.returned == 1
     assert snapshot.tasks[0].title == VISIBLE_TASK_TITLE
     assert snapshot.tasks[0].assigned_service == "GoreeCloud Manager"
+
+    _assert_monitor_condition(state="healthy", condition="healthy", status_code=200, forbidden_token=token)
 
     response, payload = _raw_payload()
     assert response.headers.get("Cache-Control") == "private, no-store"
@@ -257,10 +354,6 @@ def assert_visible(*, include_fail_soft: bool) -> None:
     assert wrong.status_code == 401, wrong.text
     assert wrong.json() == {"detail": "Authentication required."}
 
-    # A production-pattern POST can be rejected by Django's CSRF middleware before
-    # the GET-only view returns its own 405. Either 403 or 405 proves this live path
-    # did not accept the state-changing request; unit/API tests retain the exact 405
-    # contract at the view boundary.
     write_attempt = httpx.post(_api_url(), headers=_headers(), timeout=5.0)
     assert write_attempt.status_code in {403, 405}, write_attempt.text
 
@@ -268,16 +361,20 @@ def assert_visible(*, include_fail_soft: bool) -> None:
     _assert_manager_web(expect_task=True)
     if include_fail_soft:
         _assert_fail_soft(payload)
-    print("Final-topology visible-scope assertions passed.")
+    print("Final-topology visible-scope and monitoring assertions passed.")
 
 
 def assert_revoked() -> None:
+    token = _token()
     snapshot = tasks_snapshot()
     assert snapshot.state == "healthy", snapshot
+    assert snapshot.condition == "healthy", snapshot
     assert snapshot.identity == INTEGRATION_USERNAME
     assert snapshot.total_open == 0
     assert snapshot.returned == 0
     assert snapshot.tasks == ()
+
+    _assert_monitor_condition(state="healthy", condition="healthy", status_code=200, forbidden_token=token)
 
     _, payload = _raw_payload()
     assert payload["summary"]["total_open"] == 0
@@ -286,7 +383,7 @@ def assert_revoked() -> None:
     assert VISIBLE_TASK_TITLE not in json.dumps(payload)
     _assert_manager_health()
     _assert_manager_web(expect_task=False)
-    print("Final-topology membership-revocation assertions passed.")
+    print("Final-topology membership-revocation and monitoring assertions passed.")
 
 
 def main() -> None:
