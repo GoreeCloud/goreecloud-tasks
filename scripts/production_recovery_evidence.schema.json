@@ -1,0 +1,366 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goreecloud.com/schemas/tasks-production-recovery-evidence-v1.json",
+  "title": "GoreeCloud Tasks Production Recovery Evidence",
+  "description": "Non-secret evidence record for a material GoreeCloud Tasks production recovery or restore test.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "protected_system",
+    "test",
+    "recovery_point",
+    "recovery",
+    "validation",
+    "authoritative_state",
+    "result",
+    "decision"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "record_type": {
+      "const": "goreecloud-tasks-production-recovery-evidence"
+    },
+    "protected_system": {
+      "$ref": "#/$defs/protected_system"
+    },
+    "test": {
+      "$ref": "#/$defs/test"
+    },
+    "recovery_point": {
+      "$ref": "#/$defs/recovery_point"
+    },
+    "recovery": {
+      "$ref": "#/$defs/recovery"
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    },
+    "authoritative_state": {
+      "$ref": "#/$defs/authoritative_state"
+    },
+    "result": {
+      "$ref": "#/$defs/result"
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    }
+  },
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "string_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "protected_system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "environment",
+        "recovery_classification",
+        "source_revision"
+      ],
+      "properties": {
+        "name": {
+          "const": "GoreeCloud Tasks"
+        },
+        "environment": {
+          "const": "Infrastructure Services VM"
+        },
+        "recovery_classification": {
+          "enum": [
+            "critical",
+            "important",
+            "replaceable"
+          ]
+        },
+        "source_revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "test_id",
+        "started_at",
+        "completed_at",
+        "administrator",
+        "reviewer"
+      ],
+      "properties": {
+        "test_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "administrator": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "reviewer": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      }
+    },
+    "recovery_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "backup_technology",
+        "recovery_point_id",
+        "repository_record_reference",
+        "selection_reason",
+        "trust_assessment",
+        "integrity_verified",
+        "multiple_recovery_points_available",
+        "independent_copy_verified",
+        "independence_dimensions",
+        "credential_record_reference",
+        "credentials_recoverable_independently",
+        "active_credential_value_recorded"
+      ],
+      "properties": {
+        "backup_technology": {
+          "enum": [
+            "postgresql-native",
+            "kopia",
+            "proxmox-vm-backup",
+            "combined"
+          ]
+        },
+        "recovery_point_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "repository_record_reference": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "selection_reason": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "trust_assessment": {
+          "enum": [
+            "trusted",
+            "uncertain",
+            "rejected"
+          ]
+        },
+        "integrity_verified": {
+          "type": "boolean"
+        },
+        "multiple_recovery_points_available": {
+          "type": "boolean"
+        },
+        "independent_copy_verified": {
+          "type": "boolean"
+        },
+        "independence_dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "filesystem",
+              "storage_pool",
+              "physical_disk",
+              "server",
+              "virtual_machine",
+              "container",
+              "operating_system",
+              "administrative_account",
+              "physical_location",
+              "hosting_provider"
+            ]
+          }
+        },
+        "credential_record_reference": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "credentials_recoverable_independently": {
+          "type": "boolean"
+        },
+        "active_credential_value_recorded": {
+          "const": false
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "restore_destination",
+        "components_restored"
+      ],
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "restore_destination": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "components_restored": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/non_empty_string"
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "restored_information_validated",
+        "database_operational",
+        "application_operational",
+        "ownership_and_permissions_validated",
+        "network_access_validated",
+        "dns_validated",
+        "https_validated",
+        "authentication_validated",
+        "authorization_and_privacy_validated",
+        "monitoring_restored",
+        "notification_receipt_validated",
+        "backup_protection_resumed",
+        "repository_integrity_validated",
+        "repository_capacity_safe",
+        "recovery_credentials_accessible",
+        "recovery_documentation_available_independently",
+        "temporary_recovery_resources_handled"
+      ],
+      "properties": {
+        "restored_information_validated": {"type": "boolean"},
+        "database_operational": {"type": "boolean"},
+        "application_operational": {"type": "boolean"},
+        "ownership_and_permissions_validated": {"type": "boolean"},
+        "network_access_validated": {"type": "boolean"},
+        "dns_validated": {"type": "boolean"},
+        "https_validated": {"type": "boolean"},
+        "authentication_validated": {"type": "boolean"},
+        "authorization_and_privacy_validated": {"type": "boolean"},
+        "monitoring_restored": {"type": "boolean"},
+        "notification_receipt_validated": {"type": "boolean"},
+        "backup_protection_resumed": {"type": "boolean"},
+        "repository_integrity_validated": {"type": "boolean"},
+        "repository_capacity_safe": {"type": "boolean"},
+        "recovery_credentials_accessible": {"type": "boolean"},
+        "recovery_documentation_available_independently": {"type": "boolean"},
+        "temporary_recovery_resources_handled": {"type": "boolean"}
+      }
+    },
+    "authoritative_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "decided_by",
+        "decided_at",
+        "rationale"
+      ],
+      "properties": {
+        "decision": {
+          "enum": [
+            "production-promoted",
+            "test-only-not-authoritative",
+            "not-promoted"
+          ]
+        },
+        "decided_by": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rationale": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "problems_encountered",
+        "corrective_actions",
+        "follow_up_requirements",
+        "unresolved_material_problems"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "partial"
+          ]
+        },
+        "problems_encountered": {
+          "$ref": "#/$defs/string_list"
+        },
+        "corrective_actions": {
+          "$ref": "#/$defs/string_list"
+        },
+        "follow_up_requirements": {
+          "$ref": "#/$defs/string_list"
+        },
+        "unresolved_material_problems": {
+          "type": "boolean"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "go_no_go",
+        "production_recovery_approved",
+        "decided_by",
+        "reviewed_at",
+        "rationale"
+      ],
+      "properties": {
+        "go_no_go": {
+          "enum": [
+            "go",
+            "no-go"
+          ]
+        },
+        "production_recovery_approved": {
+          "type": "boolean"
+        },
+        "decided_by": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "reviewed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rationale": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      }
+    }
+  }
+}
