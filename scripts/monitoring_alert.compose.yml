@@ -85,7 +85,6 @@ services:
       - caddy_config:/config
     networks:
       proxy:
-        ipv4_address: 172.19.0.2
         aliases:
           - tasks.goreecloud.com
     healthcheck:
