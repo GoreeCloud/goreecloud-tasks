@@ -128,6 +128,7 @@ FORBIDDEN_KEY = re.compile(
     r"cookie_value|session_token|connection_string)(?:$|_)",
     re.IGNORECASE,
 )
+SAFE_SECRET_ASSERTION_KEYS = {"active_credential_value_recorded"}
 
 SECRET_VALUE_PATTERNS = [
     re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"),
@@ -147,7 +148,7 @@ def scan_for_secrets(value: Any, path: str = "$") -> None:
     if isinstance(value, dict):
         for key, child in value.items():
             normalized = re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
-            if FORBIDDEN_KEY.search(normalized):
+            if normalized not in SAFE_SECRET_ASSERTION_KEYS and FORBIDDEN_KEY.search(normalized):
                 fail(f"{path}.{key}", "secret-bearing field names are prohibited in recovery evidence")
             scan_for_secrets(child, f"{path}.{key}")
         return
