@@ -33,6 +33,7 @@ OWNER_USERNAME = "manager-e2e-owner"
 INTEGRATION_USERNAME = "goreecloud-manager-integration"
 OUTSIDER_USERNAME = "manager-e2e-outsider"
 SHARED_PROJECT_NAME = "Manager E2E Infrastructure Work"
+AUTHORIZATION_ANCHOR_PROJECT_NAME = "Manager E2E Authorization Anchor"
 PRIVATE_PROJECT_NAME = "Manager E2E Private Work"
 VISIBLE_TASK_TITLE = "Validate Manager cross-application recovery visibility"
 SENSITIVE_DESCRIPTION = "MANAGER-E2E-SENSITIVE-DESCRIPTION-MUST-NOT-LEAK"
@@ -67,6 +68,27 @@ def _harden_integration_user(user) -> None:
     )
 
 
+def _shared_viewer_project(*, owner, integration, name: str) -> Project:
+    project, _ = Project.objects.get_or_create(
+        owner=owner,
+        name=name,
+        defaults={"visibility": Project.Visibility.SHARED},
+    )
+    if project.visibility != Project.Visibility.SHARED:
+        project.visibility = Project.Visibility.SHARED
+        project.save(update_fields=["visibility", "updated_at"])
+
+    membership, _ = ProjectMembership.objects.get_or_create(
+        project=project,
+        user=integration,
+        defaults={"role": ProjectMembership.Role.VIEWER, "is_active": True},
+    )
+    membership.role = ProjectMembership.Role.VIEWER
+    membership.is_active = True
+    membership.save(update_fields=["role", "is_active"])
+    return project
+
+
 def seed() -> None:
     """Create a deterministic synthetic integration scope."""
 
@@ -75,23 +97,16 @@ def seed() -> None:
     outsider = _user(OUTSIDER_USERNAME)
     _harden_integration_user(integration)
 
-    shared_project, _ = Project.objects.get_or_create(
+    shared_project = _shared_viewer_project(
         owner=owner,
+        integration=integration,
         name=SHARED_PROJECT_NAME,
-        defaults={"visibility": Project.Visibility.SHARED},
     )
-    if shared_project.visibility != Project.Visibility.SHARED:
-        shared_project.visibility = Project.Visibility.SHARED
-        shared_project.save(update_fields=["visibility", "updated_at"])
-
-    membership, _ = ProjectMembership.objects.get_or_create(
-        project=shared_project,
-        user=integration,
-        defaults={"role": ProjectMembership.Role.VIEWER, "is_active": True},
+    _shared_viewer_project(
+        owner=owner,
+        integration=integration,
+        name=AUTHORIZATION_ANCHOR_PROJECT_NAME,
     )
-    membership.role = ProjectMembership.Role.VIEWER
-    membership.is_active = True
-    membership.save(update_fields=["role", "is_active"])
 
     private_project, _ = Project.objects.get_or_create(
         owner=owner,
@@ -186,7 +201,7 @@ def seed() -> None:
 
 
 def revoke() -> None:
-    """Deactivate the integration user's project membership."""
+    """Deactivate only the Viewer membership that contains the visible test task."""
 
     updated = ProjectMembership.objects.filter(
         project__name=SHARED_PROJECT_NAME,
@@ -198,7 +213,7 @@ def revoke() -> None:
         raise SystemExit(
             f"Expected to revoke exactly one Manager integration membership; updated {updated}."
         )
-    print("Revoked disposable Manager integration membership.")
+    print("Revoked disposable Manager visible-project membership; authorization anchor remains active.")
 
 
 def main() -> None:

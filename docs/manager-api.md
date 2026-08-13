@@ -4,7 +4,7 @@
 
 GoreeCloud Tasks exposes a deliberately narrow read-only API for GoreeCloud Manager so Manager can display approved operational work without direct database access and without gaining a general application-administrator bypass around Tasks authorization.
 
-The initial endpoint is:
+The endpoint is:
 
 ```text
 GET /api/v1/manager/operational-tasks/
@@ -29,7 +29,7 @@ TASKS_MANAGER_API_MAX_TASKS=100
 
 The direct token and token-file settings are mutually exclusive. An enabled integration requires a token of at least 32 characters. The API remains disabled by default.
 
-The configured Tasks user is the authorization principal. The endpoint begins with:
+The configured Tasks user is the authorization principal. After bearer authentication and service-identity validation, the endpoint begins task selection with:
 
 ```python
 Task.objects.visible_to(identity)
@@ -37,9 +37,34 @@ Task.objects.visible_to(identity)
 
 before applying the Manager-specific operational filter. Manager cannot provide a username, user ID, project ID, or alternate principal to expand that scope.
 
-The intended deployment pattern is a dedicated Tasks integration account that is given Viewer membership only in shared projects that Manager is explicitly allowed to observe. Removing or deactivating that membership immediately removes those project tasks from future API responses. Giving the account Django staff or superuser status does not expand the normal `visible_to()` query boundary.
+The intended deployment pattern is a dedicated non-interactive Tasks integration account that is given Viewer membership only in Shared projects that Manager is explicitly allowed to observe.
 
-Before deployment, validate the dedicated identity with:
+## Runtime least-privilege guard
+
+A valid bearer token is necessary but is not sufficient for authorization. The live API validates the configured service identity on every authenticated request using the same reusable least-privilege rules as the pre-deployment validation command.
+
+While the integration is active, the identity must remain:
+
+- active;
+- non-interactive with no usable password;
+- without an email address;
+- not Django staff;
+- not a Django superuser;
+- without owned projects;
+- without private personal tasks;
+- limited to active Viewer memberships;
+- limited to Shared, non-archived projects; and
+- assigned at least one active approved Viewer membership.
+
+If the authenticated identity no longer satisfies this posture, the API fails closed with HTTP 403 and the generic response:
+
+```json
+{"detail":"Integration identity is not authorized."}
+```
+
+The API does not reveal which least-privilege rule failed. Detailed diagnostics remain available to the administrator through the non-mutating validation command.
+
+Before deployment and after authorization changes, validate the dedicated identity with:
 
 ```bash
 python manage.py validate_manager_integration_identity \
@@ -47,7 +72,20 @@ python manage.py validate_manager_integration_identity \
   --require-membership
 ```
 
-The validator is non-mutating and fails closed when the identity is interactive, privileged, owns projects or private personal tasks, or has an active membership outside the approved Viewer-only Shared-project boundary.
+The command and the live API intentionally share the same validator so the preflight and runtime authorization rules cannot silently drift apart.
+
+## Project-scope revocation versus final authorization loss
+
+Project authorization remains membership-driven.
+
+If the identity has multiple approved Viewer memberships and one membership is removed, tasks from that project disappear from future API responses. The API may remain healthy because the identity still has another approved Viewer scope.
+
+If the final active approved Viewer membership is removed, the service identity no longer satisfies the required integration posture. The API returns HTTP 403 instead of treating a completely deauthorized service identity as a healthy empty integration.
+
+This distinction separates two different events:
+
+- **Scoped revocation:** one project's visibility is removed while another approved Viewer scope remains; and
+- **Authorization loss:** no approved Viewer scope remains, or the service identity otherwise becomes interactive, privileged, ownership-bearing, or non-Viewer.
 
 ## Data scope
 
@@ -95,14 +133,17 @@ Example structure:
 
 `TASKS_MANAGER_API_MAX_TASKS` limits the number of detailed task records returned in one response to between 1 and 500. Summary counts represent the full authorized active operational scope even when detailed records are capped.
 
+A successful authorized response may legitimately contain zero matching operational tasks. That is different from a service identity with no approved Viewer authorization, which is rejected with HTTP 403.
+
 ## Failure behavior
 
 - Disabled API: HTTP 404.
 - Missing or invalid bearer token: HTTP 401 with `WWW-Authenticate: Bearer`.
+- Authenticated bearer token mapped to an identity that no longer satisfies the approved runtime service-account posture: HTTP 403 with `Integration identity is not authorized.`.
 - Enabled but invalid local integration configuration: HTTP 503 without exposing the specific secret/configuration error to the caller.
-- Non-GET requests: HTTP 405.
+- Non-GET requests: HTTP 405 at the view boundary. In a complete middleware stack, CSRF middleware may reject an unsafe request earlier with HTTP 403.
 
-Successful responses and authentication/configuration failures use `Cache-Control: private, no-store` so integration data is not treated as cacheable public content.
+Successful responses and authentication, authorization, and configuration failures use `Cache-Control: private, no-store` at the corresponding protected response boundary. Authorization failures also vary on `Authorization`.
 
 ## Security boundary
 
@@ -113,6 +154,14 @@ The bearer token is a reusable secret and must not be committed to Git, stored i
 The complete service-identity and bearer-token procedure is documented in [`manager-integration-credential-lifecycle.md`](manager-integration-credential-lifecycle.md). That procedure defines the planned non-human identity posture, Viewer-only project authorization, protected runtime source, Vaultwarden recovery record, rotation, emergency revocation, recovery, and retirement controls without creating or authorizing production credentials.
 
 The separate production-readiness evidence gate is documented in [`manager-production-readiness-validation.md`](manager-production-readiness-validation.md). That plan defines the preferred same-VM `manager-tasks` Docker network, stable Tasks service alias, final file-backed secret validation, authorization acceptance dataset, private user-facing publication checks, monitoring, recovery, rollback, upgrade compatibility, and explicit go/no-go criteria without activating production.
+
+GoreeCloud Manager provides the sanitized integration-specific monitoring endpoint:
+
+```text
+GET /healthz/integrations/tasks/
+```
+
+Manager maps Tasks HTTP 403 to its sanitized `authorization-denied` condition without exposing the bearer credential, configured identity, task data, or upstream error body. The disposable final-topology gate validates that monitoring boundary independently from generic Manager liveness.
 
 Transport security and network reachability remain separate deployment controls. A future production connection should use the approved private GoreeCloud service-publication and networking architecture rather than direct public backend exposure.
 
@@ -126,10 +175,15 @@ Regression coverage verifies that:
 - only currently authorized active GoreeCloud project tasks are returned;
 - ordinary, private, personal, completed, and unrelated tasks remain excluded;
 - sensitive task descriptions are not serialized;
-- membership revocation removes future visibility;
-- staff/superuser flags do not expand the integration scope; and
+- revoking one project scope removes its work while another approved Viewer scope can keep the integration authorized;
+- revoking the final approved Viewer membership produces HTTP 403;
+- staff/superuser drift is rejected at runtime;
+- non-Viewer membership drift is rejected at runtime;
+- an unexpected interactive password is rejected at runtime; and
 - the endpoint remains GET-only.
 
 Identity-lifecycle regression coverage additionally verifies that the dedicated service identity can be validated as non-interactive and Viewer-only before activation.
 
-GoreeCloud Manager must independently validate the response schema and normalize only the fields it needs for display. A successful application-level integration test does not by itself approve production credentials, private publication, DNS/Caddy changes, or production deployment.
+The disposable cross-application and final-topology fixtures retain a separate empty approved Viewer authorization-anchor project. This lets those gates prove per-project revocation without accidentally turning that phase into total service-identity deauthorization. Final authorization loss is proven separately by the API regression suite, while Manager's monitoring validation independently proves the `authorization-denied` classification for Tasks HTTP 403.
+
+A successful application-level integration or CI validation does not by itself approve production credentials, private publication, DNS/Caddy/NetBird changes, monitoring registration, alert delivery, or production deployment.

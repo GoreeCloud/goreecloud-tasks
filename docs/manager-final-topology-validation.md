@@ -8,7 +8,7 @@ This gate does not authorize or perform a production deployment. It uses only sy
 
 ## Relationship to the Existing Cross-Application Gate
 
-The existing `manager-cross-app` job remains a fast application-contract compatibility test. It starts both Django applications on runner loopback and verifies the real Tasks API, Manager adapter, Manager UI, data minimization, invalid credentials, schema rejection, and Viewer-membership revocation.
+The existing `manager-cross-app` job remains a fast application-contract compatibility test. It starts both Django applications on runner loopback and verifies the real Tasks API, Manager adapter, Manager UI, data minimization, invalid credentials, schema rejection, and scoped Viewer-membership revocation.
 
 The `manager-final-topology` job adds deployment-pattern evidence that the loopback test cannot provide. Both jobs are required and intentionally remain separate.
 
@@ -82,9 +82,16 @@ The numeric group is a CI validation value only. The production host owner, grou
 
 ## Service Identity
 
-The reusable synthetic fixture hardens the disposable `goreecloud-manager-integration` identity so it is active, non-interactive, has no email, is not staff or superuser, owns no project or private personal task, and has Viewer-only access to the approved Shared project.
+The reusable synthetic fixture hardens the disposable `goreecloud-manager-integration` identity so it is active, non-interactive, has no email, is not staff or superuser, owns no project or private personal task, and has only Viewer access to approved Shared projects.
+
+The fixture intentionally creates two approved Viewer scopes:
+
+- `Manager E2E Infrastructure Work`, which contains the visible operational validation task; and
+- `Manager E2E Authorization Anchor`, an empty Shared project used only to preserve an approved Viewer scope during the scoped-revocation phase.
 
 Both integration gates run `validate_manager_integration_identity --require-membership` before treating the fixture as valid.
+
+The live Tasks Manager API also applies the same least-privilege validation rules on every authenticated request. The bearer credential therefore cannot continue to authorize requests if the service identity becomes interactive, privileged, ownership-bearing, non-Viewer, or loses its final approved Viewer scope.
 
 ## Authorization and Data-Minimization Evidence
 
@@ -92,7 +99,15 @@ The final-topology gate proves that one approved operational task is visible whi
 
 ## Membership Revocation and Restoration
 
-The gate deactivates the integration identity's Viewer membership without changing the token or Manager configuration. The next live Manager request and Manager UI must immediately lose the operational task. The synthetic fixture is then reseeded, the identity validator must pass again, and the intended visibility must return.
+The disposable Docker gates test **scoped project revocation** rather than total service-identity deauthorization.
+
+The gate deactivates the integration identity's Viewer membership for `Manager E2E Infrastructure Work` without changing the token, Manager configuration, or empty authorization-anchor membership. The next live Manager request remains authorized but immediately loses the operational task from the revoked project. The Manager UI must show no task content from that project.
+
+The synthetic fixture is then reseeded, the identity validator must pass again, and the intended task visibility must return.
+
+A separate Django API regression test covers **final authorization loss**. When the service identity's final active approved Viewer membership is removed, the Tasks API must fail closed with HTTP 403 and the generic response `Integration identity is not authorized.`.
+
+This separation proves both behaviors without conflating per-project access removal with complete service-identity authorization loss.
 
 ## Integration-Specific Monitoring Evidence
 
@@ -109,6 +124,8 @@ The monitoring response is accepted only when it remains data-minimized. It may 
 The gate verifies HTTP 200 for `healthy` and HTTP 503 for synthetic non-healthy conditions including `disabled`, `misconfigured`, `unreachable`, `authentication-rejected`, `authorization-denied`, `endpoint-unavailable`, `upstream-error`, and `schema-invalid`.
 
 Manager's generic `/healthz/` must remain HTTP 200 while these integration-specific failure conditions are exercised. This preserves the distinction between Manager liveness and Tasks integration health.
+
+The final-membership-loss Django regression proves the real Tasks 403 behavior. Manager's monitoring validation separately proves that an upstream Tasks HTTP 403 is mapped to the sanitized `authorization-denied` condition. Together, these checks cover both sides of the boundary without requiring the scoped Docker-revocation phase to invalidate the entire service identity.
 
 A successful disposable monitoring assertion proves the source-level sanitized signal and production-pattern adapter behavior. It does not create an actual Uptime Kuma monitor, Healthchecks check, ntfy alert route, or production notification path.
 
