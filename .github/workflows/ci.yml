@@ -118,6 +118,16 @@ jobs:
           MANAGER_REPO_DIR: ${{ github.workspace }}/manager-source
         run: bash scripts/validate_manager_final_topology.sh
 
+  backup-restore:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate disposable PostgreSQL backup and restoration
+        run: bash scripts/validate_backup_restore.sh
+
   docker-compose:
     runs-on: ubuntu-latest
 
