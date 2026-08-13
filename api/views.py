@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from tasks.models import Task
 
+from .authorization import validate_manager_identity
 from .config import ManagerAPIConfiguration, load_manager_api_configuration
 
 SCHEMA = "goreecloud.tasks.manager.v1"
@@ -25,6 +26,16 @@ def _authentication_failure() -> JsonResponse:
     response = JsonResponse({"detail": "Authentication required."}, status=401)
     response["WWW-Authenticate"] = "Bearer"
     response["Cache-Control"] = "private, no-store"
+    return response
+
+
+def _authorization_failure() -> JsonResponse:
+    response = JsonResponse(
+        {"detail": "Integration identity is not authorized."},
+        status=403,
+    )
+    response["Cache-Control"] = "private, no-store"
+    response["Vary"] = "Authorization"
     return response
 
 
@@ -117,6 +128,10 @@ def manager_operational_tasks(request):
     identity = _configured_identity(request, config)
     if identity is None:
         return _authentication_failure()
+
+    identity_validation = validate_manager_identity(identity, require_membership=True)
+    if not identity_validation.is_valid:
+        return _authorization_failure()
 
     queryset = (
         Task.objects.visible_to(identity)
