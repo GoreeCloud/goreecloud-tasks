@@ -1,0 +1,17 @@
+# CI-only private publication route for GoreeCloud Tasks.
+# Production must use the approved Porkbun DNS-01 TLS configuration and live
+# NetBird/AdGuard Home path; this file deliberately uses Caddy's internal CA.
+{
+	auto_https disable_redirects
+}
+
+tasks.goreecloud.com {
+	tls internal
+
+	@netbird_client remote_ip 100.64.0.0/10
+	handle @netbird_client {
+		reverse_proxy goreecloud-tasks:8000
+	}
+
+	respond "Forbidden" 403
+}
