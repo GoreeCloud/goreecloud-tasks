@@ -1,0 +1,149 @@
+# Disposable production-pattern topology for GoreeCloud Tasks -> Manager validation.
+# This file intentionally publishes no host ports and uses only synthetic CI secrets/data.
+
+name: goreecloud-tasks-manager-final-topology-ci
+
+services:
+  db:
+    image: postgres:17.10-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
+    container_name: goreecloud-tasks-final-db
+    environment:
+      POSTGRES_DB: goreecloud_tasks
+      POSTGRES_USER: goreecloud_tasks
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - tasks-postgres-data:/var/lib/postgresql/data
+    networks:
+      - tasks-backend
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  tasks:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: goreecloud-tasks-final-web
+    environment:
+      TZ: America/Chicago
+      DJANGO_TIME_ZONE: America/Chicago
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: goreecloud-tasks,localhost,127.0.0.1
+      DJANGO_SECURE_COOKIES: "false"
+      DJANGO_SECURE_SSL_REDIRECT: "false"
+      DATABASE_ENGINE: postgresql
+      POSTGRES_DB: goreecloud_tasks
+      POSTGRES_USER: goreecloud_tasks
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      TASKS_MANAGER_API_ENABLED: "true"
+      TASKS_MANAGER_API_USERNAME: goreecloud-manager-integration
+      TASKS_MANAGER_API_TOKEN_FILE: /run/secrets/goreecloud_tasks_manager_api_token
+      TASKS_MANAGER_API_MAX_TASKS: "100"
+    secrets:
+      - postgres_password
+      - django_secret_key
+      - goreecloud_tasks_manager_api_token
+    group_add:
+      - "${FINAL_TOPOLOGY_SECRET_GID:-20001}"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      tasks-backend: {}
+      manager-tasks:
+        aliases:
+          - goreecloud-tasks
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3).read()"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  manager:
+    build:
+      context: ./manager-source
+      dockerfile: Dockerfile
+    container_name: goreecloud-manager-final
+    environment:
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: manager-final-topology-ci-secret-not-for-production
+      DJANGO_ALLOWED_HOSTS: manager,localhost,127.0.0.1
+      DJANGO_CSRF_TRUSTED_ORIGINS: ""
+      DJANGO_DB_PATH: /app/data/db.sqlite3
+      TASKS_ENABLED: "true"
+      TASKS_API_URL: http://goreecloud-tasks:8000
+      TASKS_ACCESS_TOKEN_FILE: /run/secrets/goreecloud_tasks_manager_api_token
+      TASKS_TIMEOUT_SECONDS: "5"
+    secrets:
+      - goreecloud_tasks_manager_api_token
+    group_add:
+      - "${FINAL_TOPOLOGY_SECRET_GID:-20001}"
+    volumes:
+      - manager-data:/app/data
+    command:
+      - sh
+      - -c
+      - >-
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        exec gunicorn goreecloud_manager.wsgi:application --bind 0.0.0.0:8000 --workers 2 --access-logfile - --error-logfile -
+    depends_on:
+      tasks:
+        condition: service_healthy
+    networks:
+      - manager-internal
+      - manager-tasks
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=3).read()"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+secrets:
+  postgres_password:
+    file: ${FINAL_TOPOLOGY_POSTGRES_PASSWORD_SOURCE}
+  django_secret_key:
+    file: ${FINAL_TOPOLOGY_DJANGO_SECRET_SOURCE}
+  goreecloud_tasks_manager_api_token:
+    file: ${FINAL_TOPOLOGY_MANAGER_TOKEN_SOURCE}
+
+volumes:
+  tasks-postgres-data:
+  manager-data:
+
+networks:
+  tasks-backend:
+    name: goreecloud-tasks-final-backend
+    internal: true
+  manager-internal:
+    name: goreecloud-manager-final-internal
+    internal: true
+  manager-tasks:
+    name: manager-tasks
+    internal: true
