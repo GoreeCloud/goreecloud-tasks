@@ -71,7 +71,7 @@ printf '%s\n' "$DJANGO_SECRET" > secrets/django_secret_key
 printf '%s\n' "$PUBLISHER_TOKEN" > "$WORK_DIR/ntfy-publisher-token"
 printf '%s\n' "$SUBSCRIBER_TOKEN" > "$WORK_DIR/ntfy-subscriber-token"
 chmod 0640 secrets/postgres_password secrets/django_secret_key
-chmod 0600 "$WORK_DIR/ntfy-publisher-token" "$WORK_DIR/ntfy-subscriber-token"
+chmod 0444 "$WORK_DIR/ntfy-publisher-token" "$WORK_DIR/ntfy-subscriber-token"
 
 TEST_PASSWORD_HASH='$2a$10$YLiO8U21sX1uhZamTLJXHuxgVC0Z/GKISibrKCLohPgtG7yIxSk4C'
 cat > "$WORK_DIR/ntfy-server.yml" <<EOF_NTFY
