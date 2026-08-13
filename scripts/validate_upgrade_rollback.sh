@@ -171,7 +171,7 @@ compose_for "$BASE_DIR" config --quiet
 
 printf '%s\n' 'Building the previous accepted application revision...'
 compose_for "$BASE_DIR" build web
-BASE_IMAGE_ID="$(compose_for "$BASE_DIR" images -q web | head -n 1)"
+BASE_IMAGE_ID="$(docker image inspect "$BASE_SERVICE_IMAGE" --format '{{.Id}}' 2>/dev/null || true)"
 if [[ -z "$BASE_IMAGE_ID" ]]; then
   fail "could not resolve the baseline web image"
 fi
@@ -203,7 +203,7 @@ compose_for "$BASE_DIR" stop web >/dev/null
 printf '%s\n' 'Building and applying the candidate revision against the existing baseline database...'
 compose_for "$ROOT_DIR" config --quiet
 compose_for "$ROOT_DIR" build web
-TARGET_IMAGE_ID="$(compose_for "$ROOT_DIR" images -q web | head -n 1)"
+TARGET_IMAGE_ID="$(docker image inspect "$BASE_SERVICE_IMAGE" --format '{{.Id}}' 2>/dev/null || true)"
 if [[ -z "$TARGET_IMAGE_ID" ]]; then
   fail "could not resolve the target web image"
 fi
