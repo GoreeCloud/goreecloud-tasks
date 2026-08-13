@@ -1,0 +1,11 @@
+tasks.goreecloud.com {
+	tls internal
+
+	@approved_client remote_ip 100.64.0.0/10 172.19.0.50
+
+	handle @approved_client {
+		reverse_proxy goreecloud-tasks:8000
+	}
+
+	respond "Forbidden" 403
+}
