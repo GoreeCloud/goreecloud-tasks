@@ -197,6 +197,7 @@ def assert_healthy() -> None:
     finally:
         os.environ["TASKS_ACCESS_TOKEN"] = original_token
 
+    # Validate Manager's protocol boundary against a mutated copy of the real live payload.
     invalid = json.loads(json.dumps(payload))
     invalid["schema"] = "goreecloud.tasks.manager.unsupported"
     try:
@@ -213,18 +214,20 @@ def assert_healthy() -> None:
 
 def assert_revoked() -> None:
     snapshot = tasks_snapshot()
-    assert snapshot.state == "unavailable", snapshot
-    assert "denied the configured integration request" in snapshot.detail
+    assert snapshot.state == "healthy", snapshot
+    assert snapshot.identity == INTEGRATION_USERNAME
+    assert snapshot.total_open == 0
+    assert snapshot.returned == 0
     assert snapshot.tasks == ()
 
-    response = httpx.get(_api_url(), headers=_headers(), timeout=5.0)
-    assert response.status_code == 403, response.text
-    assert response.json() == {"detail": "Integration identity is not authorized."}
-    assert response.headers.get("Cache-Control") == "private, no-store"
-    assert "Authorization" in response.headers.get("Vary", "")
+    _, payload = _raw_payload()
+    assert payload["summary"]["total_open"] == 0
+    assert payload["summary"]["returned"] == 0
+    assert payload["tasks"] == []
+    assert VISIBLE_TASK_TITLE not in json.dumps(payload)
 
     _assert_manager_web(expect_task=False)
-    print("Membership-revocation authorization-denial assertions passed.")
+    print("Membership-revocation Manager cross-application assertions passed.")
 
 
 def main() -> None:
