@@ -1,0 +1,26 @@
+name: Runtime Security Preflight
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+      - "security/**"
+      - "scaffold/**"
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-security-preflight:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate disposable runtime security preflight
+        run: bash scripts/validate_runtime_security_preflight.sh
