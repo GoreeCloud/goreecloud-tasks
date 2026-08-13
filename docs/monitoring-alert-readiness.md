@@ -48,10 +48,12 @@ No reusable production token is stored in source, output, logs, or documentation
 
 - PostgreSQL on an internal backend network;
 - GoreeCloud Tasks on backend and proxy networks;
-- Caddy on the proxy network at the disposable address `172.19.0.2`;
+- Caddy on the proxy network with the `tasks.goreecloud.com` alias;
 - a hardened disposable ntfy server on the proxy network;
 - a synthetic Uptime Kuma monitor client fixed at `172.19.0.50`; and
 - a read-only subscriber used only to verify delivered alert state.
+
+Only the monitoring source uses a fixed proxy address because that source identity is the access-control fact under test. Disposable Caddy and application addresses are allowed to be dynamically assigned so migration or startup helper containers cannot collide with an unnecessary fixed test address.
 
 No service publishes a host port.
 
