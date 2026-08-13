@@ -1,0 +1,24 @@
+name: Production Recovery Evidence Contract
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  production-recovery-evidence-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Validate recovery evidence schema JSON
+        run: python3 -m json.tool scripts/production_recovery_evidence.schema.json >/dev/null
+      - name: Compile recovery evidence validator
+        run: python3 -m py_compile scripts/validate_production_recovery_evidence.py
+      - name: Run fail-closed recovery evidence contract tests
+        run: python3 scripts/validate_production_recovery_evidence.py --self-test
