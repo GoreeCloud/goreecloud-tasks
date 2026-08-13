@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "state": "proposed-not-provisioned",
+  "platform": "Uptime Kuma",
+  "monitor": {
+    "name": "GoreeCloud Tasks",
+    "type": "http",
+    "url": "https://tasks.goreecloud.com/health/",
+    "method": "GET",
+    "interval_seconds": 60,
+    "accepted_status_codes": [
+      200
+    ],
+    "tls_verification_required": true,
+    "private_caddy_path_required": true
+  },
+  "source_identity": {
+    "container": "uptime-kuma",
+    "docker_network": "proxy",
+    "ipv4": "172.19.0.50",
+    "caddy_allowlist_required": true
+  },
+  "notification": {
+    "service_identity": "uptime-kuma",
+    "permission": "write-only",
+    "internal_server_url": "http://ntfy:80",
+    "topic": "goreecloud-uptime",
+    "down_title": "GoreeCloud Tasks DOWN",
+    "up_title": "GoreeCloud Tasks RECOVERED"
+  },
+  "production_values_to_confirm": [
+    "max retries",
+    "retry interval",
+    "request timeout",
+    "notification assignment identifier",
+    "live Caddy source-address observation",
+    "actual alert receipt by an approved administrative subscriber"
+  ],
+  "limitations": {
+    "production_monitor_registered": false,
+    "production_notification_route_changed": false,
+    "independent_out_of_band_alerting_proven": false
+  }
+}
