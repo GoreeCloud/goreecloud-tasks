@@ -116,14 +116,11 @@ done
 
 printf '%s\n' 'Building the application image and starting the disposable PostgreSQL runtime...'
 docker compose build web
-docker compose up -d db
-for _ in $(seq 1 30); do
-  if docker compose exec -T db sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
-    break
-  fi
-  sleep 1
-done
-docker compose exec -T db sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1 || fail "PostgreSQL did not become ready"
+if ! docker compose up -d --wait --wait-timeout 60 db; then
+  docker compose ps
+  docker compose logs db
+  fail "PostgreSQL did not become healthy"
+fi
 
 docker compose run --rm web python manage.py migrate --noinput
 printf '%s\n' 'Starting the web container and validating live runtime controls...'
