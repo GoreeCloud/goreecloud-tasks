@@ -112,7 +112,7 @@ def _assert_manager_web(*, expect_task: bool) -> None:
     client = Client()
     assert client.login(username=username, password=password), "Manager CI login failed."
 
-    page = client.get("/tasks/", secure=True)
+    page = client.get("/tasks/", secure=True, HTTP_HOST="127.0.0.1")
     assert page.status_code == 200, page.content.decode("utf-8", errors="replace")
     text = page.content.decode("utf-8", errors="replace")
     if expect_task:
