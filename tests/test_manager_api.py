@@ -178,6 +178,32 @@ class ManagerAPITests(TestCase):
         self.assertNotIn("Completed operational task", serialized)
         self.assertEqual(response["Cache-Control"], "private, no-store")
 
+    def test_revoking_one_project_scope_keeps_api_authorized_when_another_viewer_scope_remains(self):
+        anchor_project = Project.objects.create(
+            owner=self.owner,
+            name="Authorization Anchor",
+            visibility=Project.Visibility.SHARED,
+        )
+        ProjectMembership.objects.create(
+            project=anchor_project,
+            user=self.manager_identity,
+            role=ProjectMembership.Role.VIEWER,
+        )
+
+        self.membership.is_active = False
+        self.membership.save(update_fields=["is_active"])
+
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["summary"]["total_open"], 0)
+        self.assertEqual(payload["summary"]["returned"], 0)
+        self.assertEqual(payload["tasks"], [])
+        self.assertEqual(
+            payload["authorization"]["identity"],
+            self.manager_identity.username,
+        )
+
     def test_revoking_last_viewer_membership_denies_future_api_authorization(self):
         self.assertEqual(self._get().status_code, 200)
 
