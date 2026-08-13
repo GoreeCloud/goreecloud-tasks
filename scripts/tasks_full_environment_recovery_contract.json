@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "service": "GoreeCloud Tasks",
+  "recovery_scope": "disposable production-pattern full-environment reconstruction",
+  "authoritative_state_rule": "The recovered instance becomes authoritative only after database, application, access, monitoring, and backup-resumption validation succeeds.",
+  "required_stages": [
+    "source-available",
+    "recovery-documentation-available",
+    "configuration-recreated",
+    "secrets-recreated",
+    "clean-database-created",
+    "database-restored",
+    "application-semantics-validated",
+    "private-publication-restored",
+    "authentication-boundary-validated",
+    "monitoring-health-restored",
+    "backup-protection-resumed",
+    "temporary-recovery-resources-cleaned"
+  ],
+  "required_evidence": {
+    "database": [
+      "postgresql-custom-format-dump",
+      "sha256-checksum",
+      "pg-restore-readability",
+      "clean-target-before-restore",
+      "exact-state-comparison",
+      "authorization-semantics"
+    ],
+    "application": [
+      "django-system-check",
+      "migration-check",
+      "live-health"
+    ],
+    "publication": [
+      "tasks.goreecloud.com",
+      "https",
+      "tls-hostname-san",
+      "synthetic-netbird-range-source",
+      "docker-only-backend",
+      "no-host-published-backend-or-database-port"
+    ],
+    "monitoring": [
+      "post-recovery-health-probe"
+    ],
+    "backup": [
+      "new-post-recovery-recovery-point",
+      "post-recovery-heartbeat",
+      "post-recovery-integrity-check"
+    ]
+  },
+  "target_environment_evidence_not_proven_here": [
+    "proxmox-vm-restore",
+    "dedicated-backup-server-availability",
+    "production-kopia-repository",
+    "production-backup-schedule-and-retention",
+    "production-recovery-credentials",
+    "production-adguard-home-private-dns",
+    "production-netbird-policy",
+    "production-porkbun-dns01-and-publicly-trusted-tls",
+    "production-caddy-host-listeners",
+    "production-firewall-state",
+    "production-uptime-kuma-registration-and-notification-receipt",
+    "production-manager-integration-identity-and-network",
+    "production-ntfy-service-identity-and-subscriber-delivery",
+    "independent-off-host-or-off-site-recovery-copy",
+    "production-capacity-and-rto-evidence"
+  ]
+}
