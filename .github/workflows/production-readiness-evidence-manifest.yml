@@ -1,0 +1,24 @@
+name: Production Readiness Evidence Manifest
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  production-readiness-evidence-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Validate readiness manifest JSON
+        run: python3 -m json.tool scripts/tasks_production_readiness_manifest.json >/dev/null
+      - name: Compile readiness manifest validator
+        run: python3 -m py_compile scripts/validate_tasks_production_readiness_manifest.py
+      - name: Validate aggregate readiness evidence
+        run: python3 scripts/validate_tasks_production_readiness_manifest.py --self-test
