@@ -23,7 +23,7 @@ class ManagerAPITests(TestCase):
         )
         self.manager_identity = user_model.objects.create_user(
             username="goreecloud-manager-integration",
-            password="integration-user-password-not-used-by-api",
+            password=None,
         )
         self.other = user_model.objects.create_user(
             username="other-user",
@@ -80,8 +80,8 @@ class ManagerAPITests(TestCase):
             is_goreecloud_work=True,
         )
         Task.objects.create(
-            creator=self.manager_identity,
-            title="Integration identity personal task",
+            creator=self.other,
+            title="Other user personal task",
             is_goreecloud_work=True,
         )
         Task.objects.create(
@@ -174,31 +174,49 @@ class ManagerAPITests(TestCase):
         self.assertNotIn("Sensitive implementation details", serialized)
         self.assertNotIn("Ordinary shared family task", serialized)
         self.assertNotIn("Private operational task", serialized)
-        self.assertNotIn("Integration identity personal task", serialized)
+        self.assertNotIn("Other user personal task", serialized)
         self.assertNotIn("Completed operational task", serialized)
         self.assertEqual(response["Cache-Control"], "private, no-store")
 
-    def test_revoking_membership_removes_future_api_visibility(self):
-        self.assertEqual(self._get().json()["summary"]["total_open"], 1)
+    def test_revoking_last_viewer_membership_denies_future_api_authorization(self):
+        self.assertEqual(self._get().status_code, 200)
 
         self.membership.is_active = False
         self.membership.save(update_fields=["is_active"])
 
-        payload = self._get().json()
-        self.assertEqual(payload["summary"]["total_open"], 0)
-        self.assertEqual(payload["tasks"], [])
+        response = self._get()
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Integration identity is not authorized."},
+        )
+        self.assertEqual(response["Cache-Control"], "private, no-store")
 
-    def test_staff_or_superuser_status_does_not_expand_api_scope(self):
+    def test_staff_or_superuser_drift_is_rejected_by_runtime_guard(self):
         self.manager_identity.is_staff = True
         self.manager_identity.is_superuser = True
         self.manager_identity.save(update_fields=["is_staff", "is_superuser"])
 
-        payload = self._get().json()
-        self.assertEqual(payload["summary"]["total_open"], 1)
+        response = self._get()
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(
-            [task["title"] for task in payload["tasks"]],
-            ["Validate backup recovery path"],
+            response.json(),
+            {"detail": "Integration identity is not authorized."},
         )
+
+    def test_non_viewer_role_drift_is_rejected_by_runtime_guard(self):
+        self.membership.role = ProjectMembership.Role.MEMBER
+        self.membership.save(update_fields=["role"])
+
+        response = self._get()
+        self.assertEqual(response.status_code, 403)
+
+    def test_interactive_password_drift_is_rejected_by_runtime_guard(self):
+        self.manager_identity.set_password("unexpected-interactive-password")
+        self.manager_identity.save(update_fields=["password"])
+
+        response = self._get()
+        self.assertEqual(response.status_code, 403)
 
     def test_api_is_get_only(self):
         with self._environment():
