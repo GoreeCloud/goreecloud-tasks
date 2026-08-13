@@ -1,0 +1,20 @@
+name: Monitoring Alert Readiness
+
+on:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  monitoring-alert-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Validate monitoring and alert-delivery readiness
+        run: bash scripts/validate_monitoring_alert_readiness.sh
