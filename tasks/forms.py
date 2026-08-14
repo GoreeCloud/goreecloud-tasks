@@ -10,12 +10,6 @@ from projects.models import Project, ProjectMembership
 from .models import Task
 
 
-ASSIGNABLE_PROJECT_ROLES = (
-    ProjectMembership.Role.MANAGER,
-    ProjectMembership.Role.MEMBER,
-)
-
-
 def editable_projects_for(user):
     """Return non-archived projects the user may modify."""
     if not user or not user.is_authenticated:
@@ -29,7 +23,7 @@ def editable_projects_for(user):
                 visibility=Project.Visibility.SHARED,
                 memberships__user=user,
                 memberships__is_active=True,
-                memberships__role__in=ASSIGNABLE_PROJECT_ROLES,
+                memberships__role__in=ProjectMembership.EDIT_ROLES,
             )
         )
         .distinct()
@@ -52,7 +46,7 @@ def assignable_users_for(user, project):
             | Q(
                 task_project_memberships__project=project,
                 task_project_memberships__is_active=True,
-                task_project_memberships__role__in=ASSIGNABLE_PROJECT_ROLES,
+                task_project_memberships__role__in=ProjectMembership.EDIT_ROLES,
             )
         )
         .distinct()
@@ -237,7 +231,7 @@ class TaskForm(forms.ModelForm):
             self.add_error("labels", "Project tasks can only use labels from that project.")
 
         if assignee is not None:
-            assignee_can_receive_work = assignee.is_active and project.can_edit(assignee)
+            assignee_can_receive_work = project.can_receive_assigned_work(assignee)
             retains_previous_assignee = bool(
                 self.instance
                 and self.instance.pk
