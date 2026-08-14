@@ -198,25 +198,17 @@ class Task(models.Model):
                 )
 
             if self.assignee_id:
-                assignee_is_owner = self.project.owner_id == self.assignee_id
-                assignee_is_active_member = self.project.memberships.filter(
-                    user_id=self.assignee_id,
-                    is_active=True,
-                ).exists()
+                assignee_can_edit = self.project.can_edit(self.assignee)
                 retains_previous_assignee = bool(
                     previous
                     and previous["project_id"] == self.project_id
                     and previous["assignee_id"] == self.assignee_id
                 )
-                if not (
-                    assignee_is_owner
-                    or assignee_is_active_member
-                    or retains_previous_assignee
-                ):
+                if not (assignee_can_edit or retains_previous_assignee):
                     raise ValidationError(
                         {
                             "assignee": (
-                                "The assignee must own or actively belong to the project."
+                                "The assignee must be the project owner or an active Manager or Member."
                             )
                         }
                     )
