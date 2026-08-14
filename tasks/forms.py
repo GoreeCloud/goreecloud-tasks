@@ -37,13 +37,14 @@ def editable_projects_for(user):
 
 
 def assignable_users_for(user, projects):
-    """Return users eligible to receive work in projects the user may edit."""
+    """Return active users eligible to receive work in editable projects."""
     User = get_user_model()
     if not user or not user.is_authenticated:
         return User.objects.none()
 
     return (
-        User.objects.filter(
+        User.objects.filter(is_active=True)
+        .filter(
             Q(pk=user.pk)
             | Q(owned_task_projects__in=projects)
             | Q(
@@ -234,17 +235,17 @@ class TaskForm(forms.ModelForm):
             self.add_error("labels", "Project tasks can only use labels from that project.")
 
         if assignee is not None:
-            assignee_can_edit = project.can_edit(assignee)
+            assignee_can_receive_work = assignee.is_active and project.can_edit(assignee)
             retains_previous_assignee = bool(
                 self.instance
                 and self.instance.pk
                 and self.instance.project_id == project.pk
                 and self.instance.assignee_id == assignee.pk
             )
-            if not (assignee_can_edit or retains_previous_assignee):
+            if not (assignee_can_receive_work or retains_previous_assignee):
                 self.add_error(
                     "assignee",
-                    "The assignee must be the project owner or an active Manager or Member.",
+                    "The assignee must have an active account and be the project owner or an active Manager or Member.",
                 )
 
         return cleaned
