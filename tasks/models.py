@@ -39,10 +39,7 @@ class TaskQuerySet(models.QuerySet):
                 project__visibility=Project.Visibility.SHARED,
                 project__memberships__user=user,
                 project__memberships__is_active=True,
-                project__memberships__role__in=[
-                    ProjectMembership.Role.MANAGER,
-                    ProjectMembership.Role.MEMBER,
-                ],
+                project__memberships__role__in=ProjectMembership.EDIT_ROLES,
             )
         ).distinct()
 
@@ -198,8 +195,8 @@ class Task(models.Model):
                 )
 
             if self.assignee_id:
-                assignee_can_receive_work = (
-                    self.assignee.is_active and self.project.can_edit(self.assignee)
+                assignee_can_receive_work = self.project.can_receive_assigned_work(
+                    self.assignee
                 )
                 retains_previous_assignee = bool(
                     previous
