@@ -39,10 +39,7 @@ class TaskQuerySet(models.QuerySet):
                 project__visibility=Project.Visibility.SHARED,
                 project__memberships__user=user,
                 project__memberships__is_active=True,
-                project__memberships__role__in=[
-                    ProjectMembership.Role.MANAGER,
-                    ProjectMembership.Role.MEMBER,
-                ],
+                project__memberships__role__in=ProjectMembership.EDIT_ROLES,
             )
         ).distinct()
 
@@ -198,25 +195,19 @@ class Task(models.Model):
                 )
 
             if self.assignee_id:
-                assignee_is_owner = self.project.owner_id == self.assignee_id
-                assignee_is_active_member = self.project.memberships.filter(
-                    user_id=self.assignee_id,
-                    is_active=True,
-                ).exists()
+                assignee_can_receive_work = self.project.can_receive_assigned_work(
+                    self.assignee
+                )
                 retains_previous_assignee = bool(
                     previous
                     and previous["project_id"] == self.project_id
                     and previous["assignee_id"] == self.assignee_id
                 )
-                if not (
-                    assignee_is_owner
-                    or assignee_is_active_member
-                    or retains_previous_assignee
-                ):
+                if not (assignee_can_receive_work or retains_previous_assignee):
                     raise ValidationError(
                         {
                             "assignee": (
-                                "The assignee must own or actively belong to the project."
+                                "The assignee must have an active account and be the project owner or an active Manager or Member."
                             )
                         }
                     )
