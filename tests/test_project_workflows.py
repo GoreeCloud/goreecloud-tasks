@@ -1,10 +1,12 @@
 """Functional tests for project settings, membership, and sharing boundaries."""
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
 from projects.models import Project, ProjectMembership
+from tasks.forms import TaskForm
 from tasks.models import Task
 
 
@@ -199,6 +201,18 @@ class ProjectWorkflowTests(TestCase):
         self.assertEqual(self.shared_task.status, Task.Status.COMPLETED)
         self.assertIsNotNone(self.shared_task.completed_at)
 
+    def test_existing_assignee_can_be_retained_after_role_downgrade_to_viewer(self):
+        self.member_membership.role = ProjectMembership.Role.VIEWER
+        self.member_membership.save(update_fields=["role"])
+
+        self.shared_task.status = Task.Status.COMPLETED
+        self.shared_task.save(update_fields=["status", "completed_at", "updated_at"])
+        self.shared_task.refresh_from_db()
+
+        self.assertEqual(self.shared_task.assignee, self.member)
+        self.assertEqual(self.shared_task.status, Task.Status.COMPLETED)
+        self.assertIsNotNone(self.shared_task.completed_at)
+
     def test_switching_shared_project_to_private_revokes_active_memberships(self):
         self.client.force_login(self.owner)
         response = self.client.post(
@@ -232,6 +246,73 @@ class ProjectWorkflowTests(TestCase):
             response,
             reverse("tasks:task_edit", args=[self.shared_task.pk]),
         )
+
+    def test_viewer_is_not_offered_as_new_task_assignee(self):
+        form = TaskForm(user=self.owner, initial={"project": self.shared_project})
+        assignees = form.fields["assignee"].queryset
+
+        self.assertIn(self.owner, assignees)
+        self.assertIn(self.member, assignees)
+        self.assertNotIn(self.viewer, assignees)
+
+    def test_task_form_rejects_new_viewer_assignment(self):
+        form = TaskForm(
+            data={
+                "title": "Viewer assignment must fail",
+                "project": self.shared_project.pk,
+                "assignee": self.viewer.pk,
+                "priority": Task.Priority.P3_STANDARD,
+                "status": Task.Status.READY,
+            },
+            user=self.owner,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("assignee", form.errors)
+
+    def test_model_rejects_new_viewer_assignment(self):
+        with self.assertRaises(ValidationError):
+            Task.objects.create(
+                title="Viewer assignment must fail at model boundary",
+                creator=self.owner,
+                assignee=self.viewer,
+                project=self.shared_project,
+                status=Task.Status.READY,
+            )
+
+    def test_model_accepts_owner_member_and_manager_assignments(self):
+        manager_membership = ProjectMembership.objects.create(
+            project=self.shared_project,
+            user=self.outsider,
+            role=ProjectMembership.Role.MANAGER,
+        )
+        self.assertTrue(manager_membership.is_active)
+
+        owner_task = Task.objects.create(
+            title="Owner assignment",
+            creator=self.owner,
+            assignee=self.owner,
+            project=self.shared_project,
+            status=Task.Status.READY,
+        )
+        member_task = Task.objects.create(
+            title="Member assignment",
+            creator=self.owner,
+            assignee=self.member,
+            project=self.shared_project,
+            status=Task.Status.READY,
+        )
+        manager_task = Task.objects.create(
+            title="Manager assignment",
+            creator=self.owner,
+            assignee=self.outsider,
+            project=self.shared_project,
+            status=Task.Status.READY,
+        )
+
+        self.assertEqual(owner_task.assignee, self.owner)
+        self.assertEqual(member_task.assignee, self.member)
+        self.assertEqual(manager_task.assignee, self.outsider)
 
     def test_task_create_preselects_only_an_authorized_editable_project(self):
         self.client.force_login(self.member)
