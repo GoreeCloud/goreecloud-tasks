@@ -181,6 +181,14 @@ class Task(models.Model):
         super().clean()
 
         previous = self._previous_project_actor_state()
+        if previous and previous["project_id"] != self.project_id:
+            raise ValidationError(
+                {
+                    "project": (
+                        "A task cannot be moved between authorization scopes after creation."
+                    )
+                }
+            )
 
         if self.project_id:
             retains_previous_creator = bool(
