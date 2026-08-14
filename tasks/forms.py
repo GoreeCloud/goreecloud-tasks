@@ -10,6 +10,12 @@ from projects.models import Project, ProjectMembership
 from .models import Task
 
 
+ASSIGNABLE_PROJECT_ROLES = (
+    ProjectMembership.Role.MANAGER,
+    ProjectMembership.Role.MEMBER,
+)
+
+
 def editable_projects_for(user):
     """Return non-archived projects the user may modify."""
     if not user or not user.is_authenticated:
@@ -23,10 +29,7 @@ def editable_projects_for(user):
                 visibility=Project.Visibility.SHARED,
                 memberships__user=user,
                 memberships__is_active=True,
-                memberships__role__in=[
-                    ProjectMembership.Role.MANAGER,
-                    ProjectMembership.Role.MEMBER,
-                ],
+                memberships__role__in=ASSIGNABLE_PROJECT_ROLES,
             )
         )
         .distinct()
@@ -34,7 +37,7 @@ def editable_projects_for(user):
 
 
 def assignable_users_for(user, projects):
-    """Return users visible through projects the current user may edit."""
+    """Return users eligible to receive work in projects the user may edit."""
     User = get_user_model()
     if not user or not user.is_authenticated:
         return User.objects.none()
@@ -46,6 +49,7 @@ def assignable_users_for(user, projects):
             | Q(
                 task_project_memberships__project__in=projects,
                 task_project_memberships__is_active=True,
+                task_project_memberships__role__in=ASSIGNABLE_PROJECT_ROLES,
             )
         )
         .distinct()
@@ -230,25 +234,17 @@ class TaskForm(forms.ModelForm):
             self.add_error("labels", "Project tasks can only use labels from that project.")
 
         if assignee is not None:
-            assignee_is_owner = project.owner_id == assignee.pk
-            assignee_is_active_member = project.memberships.filter(
-                user=assignee,
-                is_active=True,
-            ).exists()
+            assignee_can_edit = project.can_edit(assignee)
             retains_previous_assignee = bool(
                 self.instance
                 and self.instance.pk
                 and self.instance.project_id == project.pk
                 and self.instance.assignee_id == assignee.pk
             )
-            if not (
-                assignee_is_owner
-                or assignee_is_active_member
-                or retains_previous_assignee
-            ):
+            if not (assignee_can_edit or retains_previous_assignee):
                 self.add_error(
                     "assignee",
-                    "The assignee must own or actively belong to the selected project.",
+                    "The assignee must be the project owner or an active Manager or Member.",
                 )
 
         return cleaned
