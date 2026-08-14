@@ -65,4 +65,4 @@ The edit form deliberately includes the already-persisted assignee even when tha
 
 This source change does not modify production accounts, memberships, tasks, credentials, deployment state, networking, monitoring, backups, or service activation.
 
-The change must not be treated as accepted repository state until the normal exact-head GitHub Actions validation requirements can execute successfully. At the time this document was added, GitHub-hosted workflow jobs were unavailable because of the repository account's external Actions billing/spending condition.
+The change must not be treated as accepted repository state until the normal exact-head GitHub Actions validation requirements complete successfully on the candidate branch, the pull request, and the resulting `main` merge commit.
