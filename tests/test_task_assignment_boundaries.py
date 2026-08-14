@@ -16,6 +16,10 @@ class TaskAssignmentBoundaryTests(TestCase):
         self.member = User.objects.create_user(username="member", password="test-password")
         self.manager = User.objects.create_user(username="manager", password="test-password")
         self.viewer = User.objects.create_user(username="viewer", password="test-password")
+        self.other_project_member = User.objects.create_user(
+            username="other-project-member",
+            password="test-password",
+        )
         self.disabled_member = User.objects.create_user(
             username="disabled-member",
             password="test-password",
@@ -25,6 +29,11 @@ class TaskAssignmentBoundaryTests(TestCase):
         self.project = Project.objects.create(
             owner=self.owner,
             name="Shared assignment project",
+            visibility=Project.Visibility.SHARED,
+        )
+        self.other_project = Project.objects.create(
+            owner=self.owner,
+            name="Other shared project",
             visibility=Project.Visibility.SHARED,
         )
         self.member_membership = ProjectMembership.objects.create(
@@ -47,6 +56,11 @@ class TaskAssignmentBoundaryTests(TestCase):
             user=self.disabled_member,
             role=ProjectMembership.Role.MEMBER,
         )
+        self.other_project_membership = ProjectMembership.objects.create(
+            project=self.other_project,
+            user=self.other_project_member,
+            role=ProjectMembership.Role.MEMBER,
+        )
 
         self.member_task = Task.objects.create(
             title="Existing member assignment",
@@ -65,6 +79,41 @@ class TaskAssignmentBoundaryTests(TestCase):
         self.assertIn(self.member, assignees)
         self.assertNotIn(self.viewer, assignees)
         self.assertNotIn(self.disabled_member, assignees)
+
+    def test_project_form_does_not_offer_member_from_another_editable_project(self):
+        form = TaskForm(user=self.owner, initial={"project": self.project})
+
+        self.assertNotIn(
+            self.other_project_member,
+            form.fields["assignee"].queryset,
+        )
+
+    def test_private_task_form_offers_only_current_user(self):
+        form = TaskForm(user=self.owner)
+
+        self.assertEqual(
+            list(form.fields["assignee"].queryset),
+            [self.owner],
+        )
+
+    def test_bound_form_scopes_assignees_to_posted_project(self):
+        form = TaskForm(
+            data={
+                "title": "Bound project assignment",
+                "project": self.project.pk,
+                "assignee": self.member.pk,
+                "priority": Task.Priority.P3_STANDARD,
+                "status": Task.Status.READY,
+            },
+            user=self.owner,
+        )
+
+        self.assertIn(self.member, form.fields["assignee"].queryset)
+        self.assertNotIn(
+            self.other_project_member,
+            form.fields["assignee"].queryset,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
 
     def test_form_rejects_new_viewer_assignment(self):
         form = TaskForm(
@@ -96,6 +145,21 @@ class TaskAssignmentBoundaryTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("assignee", form.errors)
 
+    def test_form_rejects_assignment_to_member_of_different_project(self):
+        form = TaskForm(
+            data={
+                "title": "Cross-project assignment must fail",
+                "project": self.project.pk,
+                "assignee": self.other_project_member.pk,
+                "priority": Task.Priority.P3_STANDARD,
+                "status": Task.Status.READY,
+            },
+            user=self.owner,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("assignee", form.errors)
+
     def test_model_rejects_new_viewer_assignment(self):
         with self.assertRaises(ValidationError):
             Task.objects.create(
@@ -112,6 +176,16 @@ class TaskAssignmentBoundaryTests(TestCase):
                 title="Disabled assignment must fail at model boundary",
                 creator=self.owner,
                 assignee=self.disabled_member,
+                project=self.project,
+                status=Task.Status.READY,
+            )
+
+    def test_model_rejects_assignment_to_member_of_different_project(self):
+        with self.assertRaises(ValidationError):
+            Task.objects.create(
+                title="Cross-project assignment must fail at model boundary",
+                creator=self.owner,
+                assignee=self.other_project_member,
                 project=self.project,
                 status=Task.Status.READY,
             )
