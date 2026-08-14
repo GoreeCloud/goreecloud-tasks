@@ -163,6 +163,18 @@ class TaskForm(forms.ModelForm):
         self.fields["project"].required = False
         self.fields["project"].empty_label = "Inbox"
 
+        if self.instance and self.instance.pk:
+            if self.instance.project_id:
+                self.fields["project"].queryset = Project.objects.filter(
+                    pk=self.instance.project_id
+                )
+            else:
+                self.fields["project"].queryset = Project.objects.none()
+            self.fields["project"].disabled = True
+            self.fields["project"].help_text = (
+                "Task project scope is fixed after creation to preserve authorization, comments, activity history, labels, and subtask relationships."
+            )
+
         assignees = assignable_users_for(user, projects)
         if self.instance and self.instance.pk and self.instance.assignee_id:
             User = get_user_model()
@@ -189,11 +201,12 @@ class TaskForm(forms.ModelForm):
 
     def _selected_project(self, projects):
         """Resolve the editor's current project without broadening project access."""
+        if self.instance and self.instance.pk:
+            return self.instance.project
+
         project_id = None
         if self.is_bound:
             project_id = self.data.get(self.add_prefix("project"))
-        elif self.instance and self.instance.pk:
-            project_id = self.instance.project_id
         else:
             initial_project = self.initial.get("project")
             project_id = getattr(initial_project, "pk", initial_project)
