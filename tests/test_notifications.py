@@ -58,7 +58,7 @@ class ReminderPrivacyTests(TestCase):
         self.shared_task = Task.objects.create(
             title="Shared viewer task",
             creator=self.alice,
-            assignee=self.viewer,
+            assignee=self.alice,
             project=self.shared_project,
             status=Task.Status.READY,
             due_at=timezone.now() + timedelta(hours=5),
