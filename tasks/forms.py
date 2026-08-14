@@ -36,19 +36,21 @@ def editable_projects_for(user):
     )
 
 
-def assignable_users_for(user, projects):
-    """Return active users eligible to receive work in editable projects."""
+def assignable_users_for(user, project):
+    """Return active users eligible to receive work in one task context."""
     User = get_user_model()
     if not user or not user.is_authenticated:
         return User.objects.none()
 
+    if project is None:
+        return User.objects.filter(pk=user.pk, is_active=True).order_by("username")
+
     return (
         User.objects.filter(is_active=True)
         .filter(
-            Q(pk=user.pk)
-            | Q(owned_task_projects__in=projects)
+            Q(pk=project.owner_id)
             | Q(
-                task_project_memberships__project__in=projects,
+                task_project_memberships__project=project,
                 task_project_memberships__is_active=True,
                 task_project_memberships__role__in=ASSIGNABLE_PROJECT_ROLES,
             )
@@ -168,7 +170,8 @@ class TaskForm(forms.ModelForm):
         self.fields["project"].required = False
         self.fields["project"].empty_label = "Inbox"
 
-        assignees = assignable_users_for(user, projects)
+        selected_project = self._selected_project(projects)
+        assignees = assignable_users_for(user, selected_project)
         if self.instance and self.instance.pk and self.instance.assignee_id:
             User = get_user_model()
             assignees = (
@@ -181,7 +184,6 @@ class TaskForm(forms.ModelForm):
         self.fields["assignee"].queryset = assignees
         self.fields["assignee"].required = False
 
-        selected_project = self._selected_project(projects)
         if selected_project is None:
             label_queryset = Label.objects.filter(
                 owner=user,
