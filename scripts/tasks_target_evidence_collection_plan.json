@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "service": "GoreeCloud Tasks",
+  "manifest_path": "scripts/tasks_production_readiness_manifest.json",
+  "purpose": "Define a non-secret, non-authorizing collection sequence for every target-environment evidence category tracked by the production-readiness manifest.",
+  "authorization_boundary": {
+    "target_collection_requires_separate_authorization": true,
+    "plan_grants_production_authority": false,
+    "default_mode": "plan-only"
+  },
+  "global_prohibited_actions_without_separate_approval": [
+    "Create or modify a production Tasks identity, Viewer membership, bearer credential, or Vaultwarden item.",
+    "Create, replace, expose, copy, or reveal a reusable production secret or recovery credential.",
+    "Create or modify production Docker networks, DNS, Caddy, NetBird, firewall, monitoring, notification, backup, or scheduling state.",
+    "Deploy, activate, restart, stop, remove, or migrate the production Tasks service or production data.",
+    "Perform a destructive restore, rollback, failover, outage injection, or recovery exercise against a production environment.",
+    "Mark a target-evidence item satisfied or mark production approved without separately authorized evidence and review."
+  ],
+  "evidence_items": [
+    {
+      "id": "infrastructure-services-vm-runtime-inspection",
+      "phase": 1,
+      "collection_class": "read-only-inspection",
+      "evidence_sources": [
+        "GoreeCloud VPS — System and Environment Record",
+        "Docker Runtime Inventory",
+        "GoreeCloud — Inventory — Listening Ports and Active Network Services"
+      ],
+      "success_criteria": [
+        "The actual target host identity, operating system, runtime versions, active listeners, and relevant service state are observed directly.",
+        "The evidence distinguishes live observations from historical inventory values and does not expose reusable secrets."
+      ]
+    },
+    {
+      "id": "production-file-ownership-permissions-and-secret-mounts",
+      "phase": 1,
+      "collection_class": "read-only-inspection",
+      "evidence_sources": [
+        "GoreeCloud File Permission Standard",
+        "GoreeCloud — Standard — Sensitive Information Separation",
+        "GoreeCloud — Project Specification — Tasks"
+      ],
+      "success_criteria": [
+        "Final owner UID, service-readable group/GID, protected paths, modes, ACLs where applicable, and read-only secret mounts are observed directly.",
+        "Only metadata and approved path references are recorded; active secret values are excluded."
+      ]
+    },
+    {
+      "id": "production-docker-engine-compose-and-container-state",
+      "phase": 1,
+      "collection_class": "read-only-inspection",
+      "evidence_sources": [
+        "Docker Runtime Inventory",
+        "GoreeCloud — Policy — Docker",
+        "GoreeCloud Docker Stack Strategy"
+      ],
+      "success_criteria": [
+        "Docker Engine and Compose versions, image references, container user/capabilities, restart policy, mounts, networks, health state, and published-port state are observed from the target runtime.",
+        "The observation confirms no unexpected backend or database host-port exposure."
+      ]
+    },
+    {
+      "id": "production-adguard-private-dns",
+      "phase": 1,
+      "collection_class": "read-only-inspection",
+      "evidence_sources": [
+        "AdGuard Home — DNS Rewrites",
+        "GoreeCloud Private Web Service Publication Standard",
+        "GoreeCloud AdGuard Home Policy"
+      ],
+      "success_criteria": [
+        "The approved tasks.goreecloud.com private DNS result is observed from an approved client path and matched to the intended target endpoint.",
+        "The authoritative DNS record is synchronized after validation without inventing an unobserved address."
+      ]
+    },
+    {
+      "id": "production-netbird-peer-group-policy-and-source-path",
+      "phase": 1,
+      "collection_class": "read-only-inspection",
+      "evidence_sources": [
+        "GoreeCloud — Inventory — NetBird Peers, Groups, and Access Policies",
+        "GoreeCloud — Strategy — NetBird",
+        "GoreeCloud — Policy — NetBird"
+      ],
+      "success_criteria": [
+        "The target peer, approved client/group membership, applicable access policy, and observed source path are recorded from current NetBird state.",
+        "The evidence demonstrates least-privilege reachability without treating NetBird membership as application authorization."
+      ]
+    },
+    {
+      "id": "production-porkbun-dns01-and-public-tls",
+      "phase": 1,
+      "collection_class": "read-only-inspection",
+      "evidence_sources": [
+        "GoreeCloud — Reference — DNS and HTTPS Responsibilities",
+        "GoreeCloud — Provider Record — Porkbun",
+        "GoreeCloud — Verified Domains"
+      ],
+      "success_criteria": [
+        "The production certificate chain, hostname/SAN, issuer, validity, and DNS-01 ownership path are verified without exposing the Porkbun credential value.",
+        "The evidence confirms a publicly trusted certificate for the exact Tasks hostname."
+      ]
+    },
+    {
+      "id": "production-caddy-listeners-and-firewall",
+      "phase": 1,
+      "collection_class": "read-only-inspection",
+      "evidence_sources": [
+        "GoreeCloud — Reference — Caddyfile Location",
+        "GoreeCloud — Inventory — Listening Ports and Active Network Services",
+        "GoreeCloud — Policy — Caddy",
+        "GoreeCloud — Policy — Firewall"
+      ],
+      "success_criteria": [
+        "The active Caddy configuration path, site/listener ownership, host port bindings, and nftables behavior are observed on the target host.",
+        "The evidence confirms Caddy remains the controlled HTTP/HTTPS gateway and no competing direct Tasks publication path exists."
+      ]
+    },
+    {
+      "id": "production-private-publication-and-authentication",
+      "phase": 2,
+      "collection_class": "controlled-connectivity-validation",
+      "evidence_sources": [
+        "GoreeCloud Private Web Service Publication Standard",
+        "GoreeCloud — Project Specification — Tasks"
+      ],
+      "success_criteria": [
+        "An approved NetBird client reaches https://tasks.goreecloud.com over trusted TLS through the intended private publication path.",
+        "A non-approved source is denied, backend/database ports remain non-public, and the application authentication and CSRF boundaries behave as designed."
+      ]
+    },
+    {
+      "id": "production-multi-user-authorization-acceptance",
+      "phase": 2,
+      "collection_class": "multi-user-acceptance",
+      "evidence_sources": [
+        "GoreeCloud — Project Specification — Tasks"
+      ],
+      "success_criteria": [
+        "Approved acceptance identities verify private personal workspaces, explicit shared-project membership, role enforcement, assignment boundaries, and revocation behavior through the real publication path.",
+        "Acceptance uses controlled non-sensitive test content and does not grant broader access than required."
+      ]
+    },
+    {
+      "id": "production-uptime-kuma-registration-and-alert-receipt",
+      "phase": 2,
+      "collection_class": "controlled-monitoring-validation",
+      "evidence_sources": [
+        "GoreeCloud — Inventory — Uptime Kuma Monitors",
+        "GoreeCloud — Inventory — ntfy Subscribed Topics",
+        "GoreeCloud — Project Specification — Tasks"
+      ],
+      "success_criteria": [
+        "The real Tasks monitor uses the approved private health URL, observed monitoring source, final retry/timeout values, and intended notification assignment.",
+        "An approved administrator receives sanitized DOWN and RECOVERED notifications, and monitor rollback/removal is proven."
+      ]
+    },
+    {
+      "id": "production-backup-repository-schedule-retention-and-monitoring",
+      "phase": 3,
+      "collection_class": "controlled-backup-validation",
+      "evidence_sources": [
+        "Policy — Backup, Restore, and Recovery",
+        "Standard — Backup, Restore, and Recovery",
+        "Strategy — Kopia",
+        "GoreeCloud — Inventory — Healthchecks"
+      ],
+      "success_criteria": [
+        "The approved production recovery-point mechanism, repository/location, schedule, retention, encryption posture, monitoring, and notification receipt are verified.",
+        "A successful recovery point is shown usable rather than merely present."
+      ]
+    },
+    {
+      "id": "independent-off-host-or-off-site-recovery-copy",
+      "phase": 3,
+      "collection_class": "controlled-backup-validation",
+      "evidence_sources": [
+        "Policy — Backup, Restore, and Recovery",
+        "Strategy — Kopia",
+        "GoreeCloud — Plan — Dedicated Backup Server"
+      ],
+      "success_criteria": [
+        "At least one required recovery copy is independent of the primary Tasks host and failure domain.",
+        "The evidence records independence and recoverability without copying repository credentials into ordinary records."
+      ]
+    },
+    {
+      "id": "production-recovery-credentials-independent-availability",
+      "phase": 3,
+      "collection_class": "controlled-backup-validation",
+      "evidence_sources": [
+        "GoreeCloud — Standard — Sensitive Information Separation",
+        "GoreeCloud Vaultwarden Sensitive Information Storage Standard",
+        "Policy — Backup, Restore, and Recovery"
+      ],
+      "success_criteria": [
+        "The credentials required to recover Tasks and its protected backup path are independently available through approved protected storage.",
+        "Only credential record references and recovery-test results are documented; active values are not copied into evidence."
+      ]
+    },
+    {
+      "id": "proxmox-vm-backup-and-dedicated-backup-server-recovery",
+      "phase": 3,
+      "collection_class": "controlled-recovery-validation",
+      "evidence_sources": [
+        "Three Complementary Recovery Layers",
+        "GoreeCloud Proxmox Virtualization Strategy",
+        "GoreeCloud — Plan — Dedicated Backup Server"
+      ],
+      "success_criteria": [
+        "When the Infrastructure Services VM exists on Proxmox, an applicable VM-level backup is verified and a recovery path involving the approved backup system is demonstrated.",
+        "The evidence distinguishes VM-level recovery from application/database recovery."
+      ]
+    },
+    {
+      "id": "production-full-environment-recovery-test",
+      "phase": 3,
+      "collection_class": "controlled-recovery-validation",
+      "evidence_sources": [
+        "Policy — Backup, Restore, and Recovery",
+        "Standard — Backup, Restore, and Recovery",
+        "Production Recovery Evidence Contract"
+      ],
+      "success_criteria": [
+        "A separately approved material recovery exercise reconstructs the production environment from trusted recovery points and independently available configuration/credentials.",
+        "The resulting record passes the Production Recovery Evidence Contract before it can support a GO decision."
+      ]
+    },
+    {
+      "id": "production-backup-resumption-after-recovery",
+      "phase": 3,
+      "collection_class": "controlled-recovery-validation",
+      "evidence_sources": [
+        "Policy — Backup, Restore, and Recovery",
+        "Standard — Backup, Restore, and Recovery"
+      ],
+      "success_criteria": [
+        "After recovery, backup protection resumes and produces a new verified recovery point distinct from the recovery source.",
+        "Monitoring returns to the expected protected state before recovery is considered complete."
+      ]
+    },
+    {
+      "id": "production-capacity-and-recovery-time-evidence",
+      "phase": 3,
+      "collection_class": "controlled-recovery-validation",
+      "evidence_sources": [
+        "GoreeCloud VPS — System and Environment Record",
+        "Policy — Backup, Restore, and Recovery",
+        "Standard — Backup, Restore, and Recovery"
+      ],
+      "success_criteria": [
+        "Current storage/capacity headroom is recorded and a material recovery exercise records elapsed recovery time against any approved objective.",
+        "No unapproved RTO or RPO value is invented when the authoritative records do not establish one."
+      ]
+    },
+    {
+      "id": "production-manager-integration-identity-network-and-credential",
+      "phase": 4,
+      "collection_class": "controlled-integration-validation",
+      "evidence_sources": [
+        "GoreeCloud — Project Specification — Manager",
+        "GoreeCloud — Project Specification — Tasks"
+      ],
+      "success_criteria": [
+        "The dedicated non-interactive Tasks identity, approved Viewer memberships, protected bearer credential, manager-tasks network path, and read-only authorization behavior are validated together.",
+        "Manager remains unable to select another Tasks identity, bypass project membership, or gain database access."
+      ]
+    },
+    {
+      "id": "production-ntfy-identity-acl-schedule-and-end-client-delivery",
+      "phase": 4,
+      "collection_class": "controlled-integration-validation",
+      "evidence_sources": [
+        "GoreeCloud ntfy Strategy",
+        "GoreeCloud — Inventory — ntfy Subscribed Topics",
+        "GoreeCloud — Project Specification — Tasks"
+      ],
+      "success_criteria": [
+        "The production Tasks notification publisher identity, least-privilege ACL, schedule/reminder behavior, and approved end-client receipt are validated.",
+        "Notification content remains minimized and reusable credentials are excluded from payloads and evidence."
+      ]
+    },
+    {
+      "id": "production-documentation-and-recovery-records",
+      "phase": 5,
+      "collection_class": "documentation-review",
+      "evidence_sources": [
+        "GoreeCloud — Project Specification — Tasks",
+        "GoreeCloud — Change Log — Tasks",
+        "GoreeCloud Document Creation Rules",
+        "GoreeCloud — Standard — Continuous Improvement"
+      ],
+      "success_criteria": [
+        "Authoritative inventories, configuration records, recovery records, project status, and change logs agree with the observed production state.",
+        "Every satisfied manifest item has a non-secret authoritative evidence reference, verifier, and timezone-aware verification timestamp."
+      ]
+    }
+  ]
+}
