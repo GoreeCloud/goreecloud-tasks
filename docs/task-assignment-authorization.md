@@ -21,6 +21,12 @@ Membership in another editable project does not make a user assignable in the se
 
 For a private personal task, the only valid assignee is the task creator.
 
+## Central authorization source
+
+`ProjectMembership.EDIT_ROLES` is the shared project-edit role set used by task-query and assignment logic. `Project.can_receive_assigned_work(user)` combines current account activity with `Project.can_edit(user)` and is the authoritative predicate for a new project assignment.
+
+Both the form and model layers consume this project-level predicate rather than maintaining separate copies of the eligibility rule. This keeps Viewer behavior, Manager/Member behavior, owner behavior, and disabled-account handling aligned if the role model changes later.
+
 ## Historical-assignment retention
 
 Assignment eligibility is evaluated differently when editing an existing task.
@@ -35,8 +41,8 @@ Changing the assignee to a different user always evaluates the new assignee agai
 
 The rule is enforced at two application layers:
 
-1. `TaskForm` scopes the assignee field to the selected project and validates the submitted assignee.
-2. `Task.clean()` applies the same eligibility rule at the model boundary so a crafted request or direct model save cannot create an unauthorized new assignment.
+1. `TaskForm` scopes the assignee field to the selected project and validates the submitted assignee through the centralized project predicate.
+2. `Task.clean()` applies the same project predicate at the model boundary so a crafted request or direct model save cannot create an unauthorized new assignment.
 
 The edit form deliberately includes the already-persisted assignee even when that user is no longer currently eligible, allowing historical retention without broadening the normal choice list.
 
