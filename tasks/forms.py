@@ -23,29 +23,30 @@ def editable_projects_for(user):
                 visibility=Project.Visibility.SHARED,
                 memberships__user=user,
                 memberships__is_active=True,
-                memberships__role__in=[
-                    ProjectMembership.Role.MANAGER,
-                    ProjectMembership.Role.MEMBER,
-                ],
+                memberships__role__in=ProjectMembership.EDIT_ROLES,
             )
         )
         .distinct()
     )
 
 
-def assignable_users_for(user, projects):
-    """Return users visible through projects the current user may edit."""
+def assignable_users_for(user, project):
+    """Return active users eligible to receive work in one task context."""
     User = get_user_model()
     if not user or not user.is_authenticated:
         return User.objects.none()
 
+    if project is None:
+        return User.objects.filter(pk=user.pk, is_active=True).order_by("username")
+
     return (
-        User.objects.filter(
-            Q(pk=user.pk)
-            | Q(owned_task_projects__in=projects)
+        User.objects.filter(is_active=True)
+        .filter(
+            Q(pk=project.owner_id)
             | Q(
-                task_project_memberships__project__in=projects,
+                task_project_memberships__project=project,
                 task_project_memberships__is_active=True,
+                task_project_memberships__role__in=ProjectMembership.EDIT_ROLES,
             )
         )
         .distinct()
@@ -163,7 +164,8 @@ class TaskForm(forms.ModelForm):
         self.fields["project"].required = False
         self.fields["project"].empty_label = "Inbox"
 
-        assignees = assignable_users_for(user, projects)
+        selected_project = self._selected_project(projects)
+        assignees = assignable_users_for(user, selected_project)
         if self.instance and self.instance.pk and self.instance.assignee_id:
             User = get_user_model()
             assignees = (
@@ -176,7 +178,6 @@ class TaskForm(forms.ModelForm):
         self.fields["assignee"].queryset = assignees
         self.fields["assignee"].required = False
 
-        selected_project = self._selected_project(projects)
         if selected_project is None:
             label_queryset = Label.objects.filter(
                 owner=user,
@@ -230,25 +231,17 @@ class TaskForm(forms.ModelForm):
             self.add_error("labels", "Project tasks can only use labels from that project.")
 
         if assignee is not None:
-            assignee_is_owner = project.owner_id == assignee.pk
-            assignee_is_active_member = project.memberships.filter(
-                user=assignee,
-                is_active=True,
-            ).exists()
+            assignee_can_receive_work = project.can_receive_assigned_work(assignee)
             retains_previous_assignee = bool(
                 self.instance
                 and self.instance.pk
                 and self.instance.project_id == project.pk
                 and self.instance.assignee_id == assignee.pk
             )
-            if not (
-                assignee_is_owner
-                or assignee_is_active_member
-                or retains_previous_assignee
-            ):
+            if not (assignee_can_receive_work or retains_previous_assignee):
                 self.add_error(
                     "assignee",
-                    "The assignee must own or actively belong to the selected project.",
+                    "The assignee must have an active account and be the project owner or an active Manager or Member.",
                 )
 
         return cleaned

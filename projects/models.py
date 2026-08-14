@@ -70,12 +70,12 @@ class Project(models.Model):
         return (
             self.visibility == self.Visibility.SHARED
             and membership is not None
-            and membership.role
-            in {
-                ProjectMembership.Role.MANAGER,
-                ProjectMembership.Role.MEMBER,
-            }
+            and membership.role in ProjectMembership.EDIT_ROLES
         )
+
+    def can_receive_assigned_work(self, user):
+        """Return whether a user may receive a new task assignment in this project."""
+        return bool(user and user.is_active and self.can_edit(user))
 
 
 class ProjectMembership(models.Model):
@@ -85,6 +85,8 @@ class ProjectMembership(models.Model):
         MANAGER = "manager", "Manager"
         MEMBER = "member", "Member"
         VIEWER = "viewer", "Viewer"
+
+    EDIT_ROLES = (Role.MANAGER, Role.MEMBER)
 
     project = models.ForeignKey(
         Project,
