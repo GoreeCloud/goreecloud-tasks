@@ -66,7 +66,21 @@ Production credentials must remain outside source control and must use the prote
 
 The cross-application job pins the Manager repository to a reviewed commit rather than following `main` implicitly. This keeps the Tasks build reproducible and prevents unrelated future Manager changes from silently changing the software under test.
 
-When the Manager integration contract changes intentionally, the pinned Manager commit must be advanced through a reviewed GoreeCloud Tasks change after compatibility is verified.
+The current reviewed Manager baseline is:
+
+```text
+b4bc055aa6b4143a61a8073442fc9ba311b3e53e
+```
+
+That revision is the accepted Manager `main` state after the bounded runtime and integration-fault-isolation stabilization work. Both the direct application-to-application validation and the disposable final-topology validation use the same reviewed Manager revision so the two evidence paths cannot silently diverge.
+
+When the Manager integration contract or accepted Manager runtime changes intentionally, the pinned Manager commit must be advanced through a reviewed GoreeCloud Tasks change after compatibility is verified. An unmerged Manager feature or stabilization branch must not become the Tasks validation baseline merely because it exists.
+
+## CI Execution Baseline
+
+The primary Tasks CI workflow uses Ubuntu 24.04 explicitly instead of floating `ubuntu-latest`. Python application jobs use CPython 3.13.14, matching the Python release named by the digest-pinned Tasks application image. Jobs use bounded timeouts, and dependency installation paths run `pip check` where Python packages are installed directly.
+
+This keeps routine Tasks validation, ntfy integration validation, and the live Tasks/Manager contract closer to the reviewed runtime baseline while leaving the more specialized Docker/recovery workflows responsible for their own production-pattern evidence.
 
 ## Production Boundary
 
