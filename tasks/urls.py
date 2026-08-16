@@ -4,6 +4,7 @@ from django.urls import path
 
 from collaboration import views as collaboration_views
 
+from . import overdue as overdue_views
 from . import views
 
 app_name = "tasks"
@@ -11,6 +12,7 @@ app_name = "tasks"
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("today/", views.today, name="today"),
+    path("overdue/", overdue_views.overdue, name="overdue"),
     path("upcoming/", views.upcoming, name="upcoming"),
     path("search/", views.search, name="search"),
     path("tasks/add/", views.quick_add, name="quick_add"),
