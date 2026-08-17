@@ -5,6 +5,7 @@
   </form>
   <a class="nav-item{% if active_view == 'inbox' %} active{% endif %}" href="{% url 'tasks:dashboard' %}">Inbox</a>
   <a class="nav-item{% if active_view == 'today' %} active{% endif %}" href="{% url 'tasks:today' %}">Today</a>
+  <a class="nav-item{% if active_view == 'overdue' %} active{% endif %}" href="{% url 'tasks:overdue' %}">Overdue</a>
   <a class="nav-item{% if active_view == 'upcoming' %} active{% endif %}" href="{% url 'tasks:upcoming' %}">Upcoming</a>
   <a class="nav-item{% if active_view == 'projects' %} active{% endif %}" href="{% url 'projects:list' %}">Projects</a>
   <a class="nav-item{% if active_view == 'labels' %} active{% endif %}" href="{% url 'labels:list' %}">Labels</a>
