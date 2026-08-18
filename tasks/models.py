@@ -64,6 +64,12 @@ class Task(models.Model):
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
 
+    class Recurrence(models.TextChoices):
+        NONE = "none", "Does not repeat"
+        DAILY = "daily", "Daily"
+        WEEKLY = "weekly", "Weekly"
+        MONTHLY = "monthly", "Monthly"
+
     title = models.CharField(max_length=500)
     description = models.TextField(blank=True)
     creator = models.ForeignKey(
@@ -107,6 +113,11 @@ class Task(models.Model):
         default=Status.PLANNED,
     )
     due_at = models.DateTimeField(blank=True, null=True)
+    recurrence = models.CharField(
+        max_length=16,
+        choices=Recurrence.choices,
+        default=Recurrence.NONE,
+    )
     completed_at = models.DateTimeField(blank=True, null=True)
 
     # GoreeCloud operational metadata remains optional so ordinary personal,
@@ -174,7 +185,7 @@ class Task(models.Model):
             ancestor = ancestor.parent
 
     def clean(self):
-        """Enforce ownership, assignment, and subtask boundaries at model level."""
+        """Enforce ownership, assignment, recurrence, and subtask boundaries."""
         super().clean()
 
         previous = self._previous_project_actor_state()
@@ -218,6 +229,11 @@ class Task(models.Model):
         ):
             raise ValidationError(
                 {"assignee": "A private personal task can only be assigned to its creator."}
+            )
+
+        if self.recurrence != self.Recurrence.NONE and self.due_at is None:
+            raise ValidationError(
+                {"recurrence": "A repeating task requires a due date and time."}
             )
 
         self._validate_parent()
