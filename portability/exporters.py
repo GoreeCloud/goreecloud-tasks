@@ -70,6 +70,7 @@ def _task_record(task):
         "priority": task.priority,
         "status": task.status,
         "due_at": _iso(task.due_at),
+        "recurrence": task.recurrence,
         "completed_at": _iso(task.completed_at),
         "is_goreecloud_work": task.is_goreecloud_work,
         "assigned_system": task.assigned_system,
