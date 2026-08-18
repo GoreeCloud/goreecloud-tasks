@@ -5,6 +5,7 @@ from django.urls import path
 from collaboration import views as collaboration_views
 
 from . import overdue as overdue_views
+from . import recurrence as recurrence_views
 from . import views
 from . import work_views
 
@@ -34,7 +35,7 @@ urlpatterns = [
     ),
     path(
         "tasks/<int:pk>/toggle-complete/",
-        views.task_toggle_complete,
+        recurrence_views.task_toggle_complete,
         name="task_toggle_complete",
     ),
     path("tasks/<int:pk>/delete/", views.task_delete, name="task_delete"),
