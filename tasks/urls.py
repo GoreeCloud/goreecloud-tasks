@@ -6,6 +6,7 @@ from collaboration import views as collaboration_views
 
 from . import overdue as overdue_views
 from . import views
+from . import work_views
 
 app_name = "tasks"
 
@@ -14,6 +15,8 @@ urlpatterns = [
     path("today/", views.today, name="today"),
     path("overdue/", overdue_views.overdue, name="overdue"),
     path("upcoming/", views.upcoming, name="upcoming"),
+    path("shared/", work_views.shared_work, name="shared_work"),
+    path("goreecloud/", work_views.goreecloud_work, name="goreecloud_work"),
     path("search/", views.search, name="search"),
     path("tasks/add/", views.quick_add, name="quick_add"),
     path("tasks/new/", views.task_create, name="task_create"),
