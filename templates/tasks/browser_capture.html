@@ -1,0 +1,61 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create GoreeCloud Task</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/browser-capture.css' %}">
+  <script defer src="{% static 'js/browser-capture.js' %}"></script>
+</head>
+<body class="browser-capture-body">
+  <main class="browser-capture-shell">
+    <section class="browser-capture-card" aria-labelledby="browser-capture-heading">
+      <header class="browser-capture-heading">
+        <div class="browser-capture-mark" aria-hidden="true">✓</div>
+        <div>
+          <p class="eyebrow">GoreeCloud Browser</p>
+          <h1 id="browser-capture-heading">Create GoreeCloud Task</h1>
+          <p class="browser-capture-copy">Review the captured work before saving it to your private Tasks Inbox.</p>
+        </div>
+      </header>
+
+      <div id="browser-capture-waiting" class="browser-capture-status" role="status">
+        Waiting for a one-time Browser capture…
+      </div>
+
+      <form id="browser-capture-form" class="browser-capture-form" hidden>
+        {% csrf_token %}
+        <input id="browser-capture-kind" type="hidden" value="">
+        <input id="browser-capture-source" type="hidden" value="">
+
+        <label class="field-group" for="browser-capture-title">
+          <span>Task title</span>
+          <input id="browser-capture-title" name="title" type="text" maxlength="500" required autocomplete="off">
+        </label>
+
+        <label class="field-group" for="browser-capture-description">
+          <span>Description</span>
+          <textarea id="browser-capture-description" name="description" rows="9" maxlength="8192"></textarea>
+          <small>You can edit or remove the captured text and source before saving.</small>
+        </label>
+
+        <div class="browser-capture-defaults" aria-label="Task defaults">
+          <span>Private Inbox</span>
+          <span>Assigned to you</span>
+          <span>Standard priority</span>
+          <span>Ready</span>
+        </div>
+
+        <div class="browser-capture-actions">
+          <button id="browser-capture-cancel" class="secondary-button" type="button">Cancel</button>
+          <button id="browser-capture-save" class="primary-button" type="submit">Save Task</button>
+        </div>
+      </form>
+
+      <div id="browser-capture-result" class="browser-capture-status" role="status" aria-live="polite" hidden></div>
+    </section>
+  </main>
+</body>
+</html>
