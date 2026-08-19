@@ -12,7 +12,8 @@ from . import work_views
 app_name = "tasks"
 
 urlpatterns = [
-    path("browser-capture/", browser_capture_views.browser_capture, name="browser_capture"),
+    path("browser-capture", browser_capture_views.browser_capture, name="browser_capture"),
+    path("browser-capture/", browser_capture_views.browser_capture),
     path("", views.dashboard, name="dashboard"),
     path("today/", views.today, name="today"),
     path("overdue/", overdue_views.overdue, name="overdue"),
