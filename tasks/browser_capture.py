@@ -125,6 +125,9 @@ def _task_form_data(payload: dict, user) -> QueryDict:
 @require_http_methods(["GET", "POST"])
 def browser_capture(request):
     """Receive a Browser handoff without Browser-managed Tasks credentials."""
+    if request.GET:
+        return _error("capture URL must not use query parameters", status=404)
+
     if request.method == "GET":
         return _secure_response(render(request, "tasks/browser_capture.html"))
 
