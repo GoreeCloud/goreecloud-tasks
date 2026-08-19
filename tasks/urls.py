@@ -4,6 +4,7 @@ from django.urls import path
 
 from collaboration import views as collaboration_views
 
+from . import browser_capture as browser_capture_views
 from . import overdue as overdue_views
 from . import views
 from . import work_views
@@ -11,6 +12,7 @@ from . import work_views
 app_name = "tasks"
 
 urlpatterns = [
+    path("browser-capture/", browser_capture_views.browser_capture, name="browser_capture"),
     path("", views.dashboard, name="dashboard"),
     path("today/", views.today, name="today"),
     path("overdue/", overdue_views.overdue, name="overdue"),
