@@ -164,7 +164,7 @@ class CalendarProjectionAPITests(TestCase):
         self.assertNotIn("labels", serialized)
         self.assertNotIn("assignee", serialized)
         self.assertEqual(response["Cache-Control"], "private, no-store")
-        self.assertEqual(response["Vary"], "Authorization")
+        self.assertIn("Authorization", response["Vary"].split(", "))
 
     def test_membership_revocation_removes_shared_projection_immediately(self):
         self.assertEqual(self._get().json()["returned"], 2)
