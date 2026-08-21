@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render real GoreeCloud Tasks templates and validate the Glaze UI adoption in Chromium."""
+"""Render real GoreeCloud Tasks templates and validate Glaze UI adoption in Chromium."""
 
 from __future__ import annotations
 
@@ -21,14 +21,7 @@ if str(ROOT) not in sys.path:
 
 RENDER_ATTEMPTS = 2
 RENDER_TIMEOUT_SECONDS = 45
-
-SNAPSHOTS = (
-    ("dashboard", "/"),
-    ("task-detail", "task-detail"),
-    ("notifications", "notifications"),
-    ("data", "data"),
-    ("login", "login"),
-)
+SNAPSHOTS = ("dashboard", "task-detail", "notifications", "data", "login")
 
 
 def require(condition: bool, message: str) -> None:
@@ -38,10 +31,9 @@ def require(condition: bool, message: str) -> None:
 
 def find_browser() -> str:
     for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
-        path = shutil.which(name)
-        if path:
+        if path := shutil.which(name):
             return path
-    raise SystemExit("Tasks Glaze rendered acceptance failed: no supported Chromium-family browser found")
+    raise SystemExit("Tasks Glaze rendered acceptance failed: no Chromium-family browser found")
 
 
 def build_snapshots(root: Path) -> None:
@@ -60,25 +52,22 @@ def build_snapshots(root: Path) -> None:
     from django.db import connections
     from django.test import Client
     from django.urls import reverse
-
     from tasks.models import Task
 
     database_path = root / "acceptance.sqlite3"
     settings.DATABASES["default"]["NAME"] = database_path
     connections.databases["default"]["NAME"] = database_path
     connections.close_all()
-
     call_command("migrate", verbosity=0, interactive=False)
 
-    user_model = get_user_model()
-    user = user_model.objects.create_user(
+    user = get_user_model().objects.create_user(
         username="glaze-acceptance",
         password="glaze-acceptance-only-password",
         display_name="Glaze Acceptance",
     )
     task = Task.objects.create(
         title="Review Glaze UI consumer acceptance",
-        description="Representative task used only by the rendered CI fixture.",
+        description="Representative rendered-acceptance task.",
         creator=user,
         assignee=user,
         priority=Task.Priority.P2_HIGH,
@@ -92,7 +81,6 @@ def build_snapshots(root: Path) -> None:
     authenticated = Client()
     authenticated.force_login(user)
     anonymous = Client()
-
     routes = {
         "dashboard": reverse("tasks:dashboard"),
         "task-detail": reverse("tasks:task_detail", args=[task.pk]),
@@ -101,13 +89,12 @@ def build_snapshots(root: Path) -> None:
         "login": reverse("login"),
     }
 
-    for name, _placeholder in SNAPSHOTS:
-        client = anonymous if name == "login" else authenticated
-        response = client.get(routes[name], HTTP_HOST="testserver")
+    for name in SNAPSHOTS:
+        response = (anonymous if name == "login" else authenticated).get(routes[name], HTTP_HOST="testserver")
         require(response.status_code == 200, f"{name} fixture returned HTTP {response.status_code}")
         html = response.content.decode("utf-8")
-        require('data-glaze-ui="1.3.0"' in html, f"{name} fixture lost Glaze version marker")
-        require("css/glaze.css" in html, f"{name} fixture did not load glaze.css")
+        require('data-glaze-ui="1.3.0"' in html, f"{name} lost Glaze version marker")
+        require("css/glaze.css" in html, f"{name} did not load glaze.css")
         (root / f"{name}.html").write_text(html, encoding="utf-8")
 
     shutil.copytree(ROOT / "static", root / "static", dirs_exist_ok=True)
@@ -116,29 +103,29 @@ def build_snapshots(root: Path) -> None:
 
 
 def acceptance_page() -> str:
-    snapshot_names = ",".join(f'"{name}"' for name, _ in SNAPSHOTS)
-    return f"""<!doctype html>
-<html lang=\"en\" data-status=\"pending\">
+    pages = ",".join(f'"{name}"' for name in SNAPSHOTS)
+    return f'''<!doctype html>
+<html lang="en" data-status="pending">
 <head>
-<meta charset=\"utf-8\">
-<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tasks Glaze UI rendered acceptance</title>
 <style>
 html,body{{margin:0;padding:0;background:#fff;color:#000;font:14px system-ui,sans-serif}}
 iframe{{display:block;width:100vw;height:1000px;border:0}}
-#result{{position:fixed;inset:auto 0 0 0;z-index:9999;margin:0;padding:8px;background:#fff;color:#000;white-space:pre-wrap}}
+#result{{position:fixed;inset:auto 0 0;z-index:9999;margin:0;padding:8px;background:#fff;color:#000;white-space:pre-wrap}}
 </style>
 </head>
 <body>
-<div id=\"frames\"></div><pre id=\"result\">PENDING</pre>
+<div id="frames"></div><pre id="result">PENDING</pre>
 <script>
-const pages=[{snapshot_names}];
+const pages=[{pages}];
 const params=new URLSearchParams(location.search);
 const expectedTheme=params.get('theme')||'light';
 const mode=params.get('mode')||'normal';
 const failures=[];
 const note=(ok,message)=>{{if(!ok) failures.push(message)}};
-const durationMs=(value)=>Math.max(...value.split(',').map(part=>{{
+const durationMs=value=>Math.max(...value.split(',').map(part=>{{
   const item=part.trim();
   if(item.endsWith('ms')) return parseFloat(item)||0;
   if(item.endsWith('s')) return (parseFloat(item)||0)*1000;
@@ -156,16 +143,23 @@ function inspect(frame,name){{
   const win=frame.contentWindow;
   note(Boolean(doc),`${{name}} has no contentDocument`);
   if(!doc) return;
+
   const root=doc.documentElement;
+  const rootStyle=win.getComputedStyle(root);
   note(root.dataset.glazeUi==='1.3.0',`${{name}} lost data-glaze-ui=1.3.0`);
   note(root.dataset.glazeConsumerStatus==='adoption-candidate',`${{name}} lost Adoption Candidate marker`);
-  const sheets=[...doc.querySelectorAll('link[rel=stylesheet]')].map(link=>link.getAttribute('href')||'');
-  note(sheets.length>0 && sheets[sheets.length-1].includes('css/glaze.css'),`${{name}} does not load glaze.css last`);
 
-  const rootStyle=win.getComputedStyle(root);
-  const expectedCanvas=expectedTheme==='dark'?'#0d1119':'#eef3f9';
-  note(rootStyle.getPropertyValue('--glaze-canvas').trim().toLowerCase()===expectedCanvas,`${{name}} did not activate ${{expectedTheme}} Glaze tokens`);
+  const sheets=[...doc.querySelectorAll('link[rel=stylesheet]')].map(link=>link.getAttribute('href')||'');
+  note(sheets.length>0&&sheets[sheets.length-1].includes('css/glaze.css'),`${{name}} does not load glaze.css last`);
   note(rootStyle.getPropertyValue('--glaze-target-min').trim()==='44px',`${{name}} lost 44px target token`);
+
+  if(mode==='forced-colors'){{
+    note(rootStyle.getPropertyValue('--glaze-canvas').trim().toLowerCase()==='canvas',`${{name}} did not activate forced-colors Canvas semantics`);
+    note(rootStyle.getPropertyValue('--glaze-focus-ring').trim().toLowerCase()==='highlight',`${{name}} did not activate forced-colors Highlight focus semantics`);
+  }} else {{
+    const expectedCanvas=expectedTheme==='dark'?'#0d1119':'#eef3f9';
+    note(rootStyle.getPropertyValue('--glaze-canvas').trim().toLowerCase()===expectedCanvas,`${{name}} did not activate ${{expectedTheme}} Glaze tokens`);
+  }}
 
   note(doc.documentElement.scrollWidth<=frame.clientWidth+1,`${{name}} horizontally overflows ${{frame.clientWidth}}px viewport: ${{doc.documentElement.scrollWidth}}px`);
 
@@ -178,13 +172,12 @@ function inspect(frame,name){{
   }}
 
   const completion=doc.querySelector('.complete-button');
-  if(completion && visible(completion)){{
+  if(completion&&visible(completion)){{
     const rect=completion.getBoundingClientRect();
     note(rect.width>=43.5&&rect.height>=43.5,`${{name}} completion target is ${{rect.width.toFixed(1)}}x${{rect.height.toFixed(1)}}`);
   }}
-
   const nav=doc.querySelector('.nav-item');
-  if(nav && visible(nav)) note(nav.getBoundingClientRect().height>=43.5,`${{name}} navigation target is below 44px`);
+  if(nav&&visible(nav)) note(nav.getBoundingClientRect().height>=43.5,`${{name}} navigation target is below 44px`);
 
   if(mode==='reduced-motion'){{
     const motionTarget=controls[0]||doc.body;
@@ -205,7 +198,7 @@ async function run(){{
     host.appendChild(frame);
     return frame;
   }});
-  await Promise.all(frames.map(frame=>new Promise(resolve=>{{frame.addEventListener('load',resolve,{{once:true}});}})));
+  await Promise.all(frames.map(frame=>new Promise(resolve=>frame.addEventListener('load',resolve,{{once:true}}))));
   await new Promise(resolve=>setTimeout(resolve,150));
   for(const frame of frames) inspect(frame,frame.dataset.page);
 
@@ -213,14 +206,14 @@ async function run(){{
   if(failures.length){{
     document.documentElement.dataset.status='fail';
     result.textContent='FAIL\\n'+failures.join('\\n');
-  }}else{{
+  }} else {{
     document.documentElement.dataset.status='pass';
     result.textContent='PASS';
   }}
 }}
 run();
 </script>
-</body></html>"""
+</body></html>'''
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -268,8 +261,7 @@ def browser_command(browser: str, url: str, profile: str, *, width: int, height:
         command.append("--force-prefers-reduced-motion")
     elif mode == "forced-colors":
         command.append("--force-high-contrast")
-    command.extend(["--dump-dom", url])
-    return command
+    return [*command, "--dump-dom", url]
 
 
 def run_case(browser: str, port: int, *, width: int, height: int, theme: str, mode: str = "normal") -> None:
