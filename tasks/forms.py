@@ -100,6 +100,11 @@ class TaskForm(forms.ModelForm):
         input_formats=["%Y-%m-%dT%H:%M"],
         widget=LocalDateTimeInput,
     )
+    recurrence = forms.ChoiceField(
+        choices=Task.Recurrence.choices,
+        required=False,
+        initial=Task.Recurrence.NONE,
+    )
 
     class Meta:
         model = Task
@@ -111,6 +116,7 @@ class TaskForm(forms.ModelForm):
             "priority",
             "status",
             "due_at",
+            "recurrence",
             "labels",
             "is_goreecloud_work",
             "assigned_system",
@@ -133,6 +139,7 @@ class TaskForm(forms.ModelForm):
             "resume_condition": forms.Textarea(attrs={"rows": 3}),
         }
         labels = {
+            "recurrence": "Repeat",
             "is_goreecloud_work": "GoreeCloud operational work",
             "environment": "Environment or virtual machine",
             "backup_prerequisite": "Backup prerequisite required",
@@ -142,6 +149,9 @@ class TaskForm(forms.ModelForm):
             "related_documentation": "Related GoreeCloud documentation",
         }
         help_texts = {
+            "recurrence": (
+                "Daily, weekly, or monthly repeat creates the next occurrence when this task is completed. A due date and time is required."
+            ),
             "labels": (
                 "Personal tasks use your private labels. Project tasks use only labels scoped to that project."
             ),
@@ -203,12 +213,34 @@ class TaskForm(forms.ModelForm):
             return None
         return projects.filter(pk=project_id).first()
 
+    def clean_recurrence(self):
+        """Keep older form submissions compatible by treating omission as non-repeating."""
+        return self.cleaned_data.get("recurrence") or Task.Recurrence.NONE
+
     def clean(self):
-        """Validate assignment and labels against the selected task context."""
+        """Validate assignment, labels, and recurrence against the task context."""
         cleaned = super().clean()
         project = cleaned.get("project")
         assignee = cleaned.get("assignee")
         labels = cleaned.get("labels")
+        recurrence = cleaned.get("recurrence")
+        due_at = cleaned.get("due_at")
+        status = cleaned.get("status")
+
+        if recurrence and recurrence != Task.Recurrence.NONE and due_at is None:
+            self.add_error("recurrence", "A repeating task requires a due date and time.")
+
+        if recurrence and recurrence != Task.Recurrence.NONE and status == Task.Status.COMPLETED:
+            was_completed = bool(
+                self.instance
+                and self.instance.pk
+                and self.instance.status == Task.Status.COMPLETED
+            )
+            if not was_completed:
+                self.add_error(
+                    "status",
+                    "Use the Complete action for a repeating task so the next occurrence can be created safely.",
+                )
 
         if project is None:
             if assignee is not None and assignee.pk != self.user.pk:
