@@ -26,6 +26,8 @@ def main() -> None:
     base = read("templates/base.html")
     glaze = read("static/css/glaze.css")
     contract = read("docs/glaze-ui.md")
+    rendered = read("scripts/validate_glaze_ui_rendered.py")
+    workflow = read(".github/workflows/ci.yml")
 
     # Version and lifecycle boundary.
     require(f'data-glaze-ui="{TARGET_VERSION}"' in base, "base template must declare the Glaze UI target version")
@@ -90,6 +92,30 @@ def main() -> None:
     require("background: var(--glaze-surface-strong);" in glaze, "solid-surface fallback is missing")
     require("forced-color-adjust: none" in glaze, "forced-colors state protection is missing")
 
+    # The rendered gate must exercise real Django surfaces and representative modes.
+    for marker in (
+        '"dashboard"',
+        '"task-detail"',
+        '"notifications"',
+        '"data"',
+        '"login"',
+        "(390, 844)",
+        "(1280, 900)",
+        'for theme in ("light", "dark")',
+        'mode="reduced-motion"',
+        'mode="forced-colors"',
+        "doc.documentElement.scrollWidth<=frame.clientWidth+1",
+        "rect.height>=43.5",
+    ):
+        require(marker in rendered, f"rendered acceptance missing required coverage marker: {marker}")
+
+    # CI must validate the exact candidate SHA, not GitHub's synthetic PR merge ref.
+    require("Validate Glaze UI consumer source contract" in workflow, "CI is missing source-level Glaze validation")
+    require("Validate rendered Glaze UI adoption" in workflow, "CI is missing rendered Glaze validation")
+    exact_ref = "ref: ${{ github.event.pull_request.head.sha || github.sha }}"
+    require(workflow.count(exact_ref) >= 7, "all Tasks CI jobs must check out the exact candidate revision")
+    require(workflow.count("persist-credentials: false") >= 9, "Tasks and pinned cross-app checkouts must avoid persisted credentials")
+
     # The consumer layer itself must remain local and tracker-free.
     lowered = glaze.lower()
     for forbidden in ("https://", "http://", "@import", "analytics", "tracker", "googletagmanager", "fonts.googleapis"):
@@ -97,7 +123,8 @@ def main() -> None:
 
     print(
         "GoreeCloud Tasks Glaze UI consumer source contract validated: "
-        f"target {TARGET_VERSION}, status Adoption Candidate, reviewed Glaze revision {GLAZE_REVISION}"
+        f"target {TARGET_VERSION}, status Adoption Candidate, reviewed Glaze revision {GLAZE_REVISION}; "
+        "rendered acceptance and exact-head CI are fail-closed"
     )
 
 
