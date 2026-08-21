@@ -100,6 +100,11 @@ class TaskForm(forms.ModelForm):
         input_formats=["%Y-%m-%dT%H:%M"],
         widget=LocalDateTimeInput,
     )
+    recurrence = forms.ChoiceField(
+        choices=Task.Recurrence.choices,
+        required=False,
+        initial=Task.Recurrence.NONE,
+    )
 
     class Meta:
         model = Task
@@ -207,6 +212,10 @@ class TaskForm(forms.ModelForm):
         if not project_id:
             return None
         return projects.filter(pk=project_id).first()
+
+    def clean_recurrence(self):
+        """Keep older form submissions compatible by treating omission as non-repeating."""
+        return self.cleaned_data.get("recurrence") or Task.Recurrence.NONE
 
     def clean(self):
         """Validate assignment, labels, and recurrence against the task context."""
