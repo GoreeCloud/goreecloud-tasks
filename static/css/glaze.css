@@ -429,6 +429,36 @@ a.task-title:hover,
 
 /* Adaptive-window corrections retained on the Stable 1.3 contract. */
 @media (max-width: 760px) {
+  .topbar {
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 4px 12px;
+    padding-block: 8px;
+  }
+
+  .brand {
+    display: inline-flex;
+    min-height: var(--glaze-target-min);
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .account {
+    width: 100%;
+    min-width: 0;
+    gap: 4px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .account > *,
+  .account form,
+  .text-button,
+  .secondary-link {
+    flex: 0 0 auto;
+  }
+
   .nav-item {
     min-height: var(--glaze-target-min);
   }
@@ -440,6 +470,10 @@ a.task-title:hover,
   .text-button,
   .secondary-link {
     padding-inline: 10px;
+  }
+
+  .flash-region {
+    top: 122px;
   }
 }
 
