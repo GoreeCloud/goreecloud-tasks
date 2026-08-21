@@ -1,0 +1,539 @@
+/*
+ * GoreeCloud Tasks — Glaze UI 1.3.0 consumer compatibility layer.
+ *
+ * This file maps the existing Tasks interface onto the canonical Glaze UI
+ * semantic contract without copying the canonical reference stylesheet.
+ * It intentionally loads after product-specific CSS so Tasks can preserve its
+ * Waypoint identity while standardizing accessibility, materials, targets,
+ * themes, and resilience behavior.
+ */
+
+:root {
+  color-scheme: light dark;
+  --glaze-version: "1.3.0";
+  --glaze-canvas: #0d1119;
+  --glaze-canvas-accent: #121824;
+  --glaze-surface: rgba(25, 32, 45, 0.78);
+  --glaze-surface-strong: rgba(24, 31, 44, 0.96);
+  --glaze-surface-muted: rgba(31, 39, 54, 0.86);
+  --glaze-text: #f3f6fb;
+  --glaze-muted: #a1aec0;
+  --glaze-line: rgba(193, 207, 229, 0.12);
+  --glaze-accent: #7aa2ff;
+  --glaze-accent-2: #a594ff;
+  --glaze-on-accent: #0b1020;
+  --glaze-info: #8ab4ff;
+  --glaze-success: #73d9a2;
+  --glaze-warning: #f7c36c;
+  --glaze-danger: #ff8a80;
+  --glaze-focus-ring: #a9c2ff;
+  --glaze-selection: rgba(122, 162, 255, 0.24);
+  --glaze-state-hover: 0.08;
+  --glaze-state-pressed: 0.12;
+  --glaze-state-focus: 0.14;
+  --glaze-state-selected: 0.12;
+  --glaze-radius-sm: 10px;
+  --glaze-radius-md: 14px;
+  --glaze-radius-control: 16px;
+  --glaze-radius-lg: 22px;
+  --glaze-radius-xl: 28px;
+  --glaze-radius-pill: 999px;
+  --glaze-target-min: 44px;
+  --glaze-target-comfortable: 48px;
+  --glaze-focus-width: 3px;
+  --glaze-focus-offset: 2px;
+  --glaze-motion-fast: 160ms;
+  --glaze-motion-standard: 220ms;
+  --glaze-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --glaze-glass-blur: 24px;
+  --glaze-shadow-raised: 0 18px 54px rgba(0, 0, 0, 0.24);
+  --glaze-shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --glaze-canvas: #eef3f9;
+    --glaze-canvas-accent: #f8fbff;
+    --glaze-surface: rgba(255, 255, 255, 0.76);
+    --glaze-surface-strong: rgba(255, 255, 255, 0.94);
+    --glaze-surface-muted: rgba(244, 247, 251, 0.86);
+    --glaze-text: #172033;
+    --glaze-muted: #67748a;
+    --glaze-line: rgba(95, 116, 146, 0.16);
+    --glaze-accent: #366cf6;
+    --glaze-accent-2: #7c5cff;
+    --glaze-on-accent: #ffffff;
+    --glaze-info: #2463d4;
+    --glaze-success: #197a4b;
+    --glaze-warning: #a15c00;
+    --glaze-danger: #b42318;
+    --glaze-focus-ring: #244fc6;
+    --glaze-selection: rgba(54, 108, 246, 0.18);
+    --glaze-shadow-raised: 0 18px 48px rgba(37, 55, 82, 0.09);
+    --glaze-shadow-soft: 0 8px 30px rgba(37, 55, 82, 0.05);
+  }
+}
+
+html {
+  background: var(--glaze-canvas);
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% -10%, color-mix(in srgb, var(--glaze-accent) 12%, transparent), transparent 34rem),
+    var(--glaze-canvas);
+  color: var(--glaze-text);
+}
+
+::selection {
+  background: var(--glaze-selection);
+  color: var(--glaze-text);
+}
+
+/* Shared interactive contract */
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  transition:
+    background-color var(--glaze-motion-fast) var(--glaze-ease-standard),
+    border-color var(--glaze-motion-fast) var(--glaze-ease-standard),
+    color var(--glaze-motion-fast) var(--glaze-ease-standard),
+    box-shadow var(--glaze-motion-fast) var(--glaze-ease-standard);
+}
+
+button,
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+select {
+  min-height: var(--glaze-target-min);
+}
+
+textarea {
+  min-height: max(108px, var(--glaze-target-min));
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: var(--glaze-focus-width) solid var(--glaze-focus-ring) !important;
+  outline-offset: var(--glaze-focus-offset) !important;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--glaze-accent);
+}
+
+.checkbox-field,
+.checkbox-line,
+.checkbox-field-group label,
+.confirm-field,
+.inline-checkbox {
+  min-height: var(--glaze-target-min);
+  align-items: center;
+}
+
+/* Functional Glass: navigation and interactive chrome only. */
+.topbar,
+.sidebar {
+  border-color: var(--glaze-line);
+  background: var(--glaze-surface);
+  -webkit-backdrop-filter: blur(var(--glaze-glass-blur)) saturate(145%);
+  backdrop-filter: blur(var(--glaze-glass-blur)) saturate(145%);
+}
+
+.topbar {
+  box-shadow: var(--glaze-shadow-soft);
+}
+
+/* Solid/Raised remain the normal content surfaces. */
+.quick-add,
+.task-editor,
+.auth-card,
+.project-card,
+.project-summary > div,
+.member-list,
+.membership-add-form,
+.comment-card,
+.read-only-note,
+.notification-card,
+.notification-boundary,
+.panel,
+.status-banner,
+.notice {
+  border-color: var(--glaze-line);
+  background: var(--glaze-surface-strong);
+}
+
+.quick-add,
+.task-editor,
+.auth-card,
+.project-card,
+.notification-card,
+.panel {
+  box-shadow: var(--glaze-shadow-soft);
+}
+
+.operational-editor,
+.operational-grid > div,
+.recovery-note,
+.notification-status-list code,
+.file-field input[type="file"] {
+  border-color: var(--glaze-line);
+  background: var(--glaze-canvas-accent);
+}
+
+.task-list,
+.label-directory,
+.activity-list,
+.reminder-list,
+.detail-section,
+.task-row,
+.label-directory-row,
+.activity-item,
+.reminder-row,
+.simple-list li,
+.member-row {
+  border-color: var(--glaze-line);
+}
+
+.owner-row {
+  background: var(--glaze-surface-muted);
+}
+
+/* Typography and semantic color mapping. */
+body,
+.quick-add-main input,
+.quick-add-options select,
+.quick-add-options input,
+.task-editor input,
+.task-editor select,
+.task-editor textarea,
+.stacked-form input,
+.member-actions select,
+.membership-add-form input,
+.membership-add-form select,
+.sidebar-search input,
+.subtask-form input,
+.subtask-form select,
+.comment-form textarea,
+.notification-form input,
+.notification-form select,
+.file-field input[type="file"],
+.operational-grid dd,
+.comment-meta strong,
+.empty-state h2 {
+  color: var(--glaze-text);
+}
+
+.account,
+.count,
+.task-meta,
+.task-description,
+.field-group,
+.field-group small,
+.auth-card > p:not(.eyebrow),
+.project-card p,
+.muted-copy,
+.summary-label,
+.member-row span:not(.role-badge),
+.task-parent-link,
+.operational-editor summary small,
+.operational-grid dt,
+.comment-meta,
+.comment-form-actions small,
+.read-only-note,
+.activity-item time,
+.checkbox-field small,
+.notification-form small,
+.notification-card .muted-copy,
+.notification-boundary p,
+.notification-status-list dt,
+.status-muted,
+.page-heading > div > p:last-child,
+.panel p,
+.muted {
+  color: var(--glaze-muted);
+}
+
+.eyebrow,
+.status-good {
+  color: var(--glaze-success);
+}
+
+.text-button,
+.secondary-link,
+a.task-title:hover,
+.task-parent-link a,
+.simple-list a {
+  color: var(--glaze-accent);
+}
+
+.field-error,
+.errorlist,
+.danger-button {
+  color: var(--glaze-danger);
+}
+
+.privacy-warning {
+  border-color: color-mix(in srgb, var(--glaze-warning) 55%, var(--glaze-line));
+  background: color-mix(in srgb, var(--glaze-warning) 12%, var(--glaze-surface-strong));
+  color: var(--glaze-warning);
+}
+
+.notice.error,
+.error-banner {
+  border-color: var(--glaze-danger);
+}
+
+.notice.error {
+  background: color-mix(in srgb, var(--glaze-danger) 12%, var(--glaze-surface-strong));
+}
+
+.notice.success,
+.success-banner,
+.requirement-chip {
+  border-color: var(--glaze-success);
+}
+
+.notice.success,
+.requirement-chip {
+  background: color-mix(in srgb, var(--glaze-success) 12%, var(--glaze-surface-strong));
+}
+
+/* Controls and hit-target corrections. */
+.nav-item {
+  min-height: var(--glaze-target-min);
+  border-radius: var(--glaze-radius-sm);
+  color: var(--glaze-text);
+}
+
+.nav-item:hover:not(.planned) {
+  background: color-mix(in srgb, var(--glaze-accent) 8%, var(--glaze-surface));
+}
+
+.nav-item.active {
+  background: color-mix(in srgb, var(--glaze-accent) 12%, var(--glaze-surface-strong));
+  color: var(--glaze-text);
+}
+
+.nav-item.planned,
+.read-only-badge,
+.project-visibility,
+.role-badge {
+  color: var(--glaze-muted);
+}
+
+.text-button,
+.secondary-link,
+.primary-button,
+.secondary-button,
+.danger-button,
+.button,
+.compact-control {
+  display: inline-flex;
+  min-height: var(--glaze-target-min);
+  align-items: center;
+  justify-content: center;
+}
+
+.text-button,
+.secondary-link {
+  padding-inline: 8px;
+}
+
+.primary-button,
+.button {
+  border-radius: var(--glaze-radius-control);
+  background: var(--glaze-accent);
+  color: var(--glaze-on-accent);
+}
+
+.secondary-button {
+  border-color: var(--glaze-line);
+  border-radius: var(--glaze-radius-control);
+  background: var(--glaze-surface-strong);
+  color: var(--glaze-text);
+}
+
+.secondary-button:hover,
+.secondary-button:focus-visible {
+  border-color: var(--glaze-accent);
+  color: var(--glaze-text);
+}
+
+.danger-button {
+  border-color: var(--glaze-danger);
+  border-radius: var(--glaze-radius-control);
+}
+
+.complete-button {
+  width: var(--glaze-target-min);
+  height: var(--glaze-target-min);
+  border-color: var(--glaze-muted);
+  color: transparent;
+}
+
+.complete-button:hover,
+.complete-button:focus-visible {
+  border-color: var(--glaze-success);
+  color: var(--glaze-success);
+}
+
+.read-only-indicator {
+  opacity: 0.55;
+}
+
+.quick-add-main input,
+.quick-add-options select,
+.quick-add-options input,
+.task-editor input,
+.task-editor select,
+.task-editor textarea,
+.stacked-form input,
+.member-actions select,
+.membership-add-form input,
+.membership-add-form select,
+.sidebar-search input,
+.subtask-form input,
+.subtask-form select,
+.comment-form textarea,
+.notification-form input,
+.notification-form select,
+.file-field input[type="file"] {
+  border-color: var(--glaze-line);
+  border-radius: var(--glaze-radius-sm);
+  background: var(--glaze-canvas-accent);
+}
+
+.count,
+.read-only-badge,
+.project-visibility,
+.role-badge,
+.label-chip,
+.requirement-chip {
+  border-color: var(--glaze-line);
+  border-radius: var(--glaze-radius-pill);
+}
+
+.label-chip,
+.requirement-chip {
+  background: var(--glaze-surface-muted);
+  color: var(--glaze-text);
+}
+
+/* Adaptive-window corrections retained on the Stable 1.3 contract. */
+@media (max-width: 760px) {
+  .nav-item {
+    min-height: var(--glaze-target-min);
+  }
+
+  .sidebar {
+    scrollbar-width: thin;
+  }
+
+  .text-button,
+  .secondary-link {
+    padding-inline: 10px;
+  }
+}
+
+/* Resilience: glass may never be required for readability. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .topbar,
+  .sidebar {
+    background: var(--glaze-surface-strong);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .topbar,
+  .sidebar,
+  .quick-add,
+  .task-editor,
+  .auth-card,
+  .project-card,
+  .notification-card,
+  .notification-boundary,
+  .panel {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--glaze-surface-strong);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --glaze-line: currentColor;
+  }
+
+  .topbar,
+  .sidebar,
+  .quick-add,
+  .task-editor,
+  .auth-card,
+  .project-card,
+  .notification-card,
+  .notification-boundary,
+  .panel,
+  input,
+  select,
+  textarea,
+  button {
+    border-width: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --glaze-canvas: Canvas;
+    --glaze-canvas-accent: Canvas;
+    --glaze-surface: Canvas;
+    --glaze-surface-strong: Canvas;
+    --glaze-surface-muted: Canvas;
+    --glaze-text: CanvasText;
+    --glaze-muted: CanvasText;
+    --glaze-line: CanvasText;
+    --glaze-accent: LinkText;
+    --glaze-on-accent: Canvas;
+    --glaze-info: LinkText;
+    --glaze-success: LinkText;
+    --glaze-warning: CanvasText;
+    --glaze-danger: LinkText;
+    --glaze-focus-ring: Highlight;
+    --glaze-selection: Highlight;
+  }
+
+  .topbar,
+  .sidebar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .nav-item.active,
+  .primary-button,
+  .button,
+  .complete-button:hover,
+  .complete-button:focus-visible {
+    forced-color-adjust: none;
+    border: 2px solid Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+}
