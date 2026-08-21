@@ -42,6 +42,9 @@ jobs:
           python -m pip install --requirement requirements.txt
           python -m pip check
 
+      - name: Validate rendered Glaze UI adoption
+        run: python scripts/validate_glaze_ui_rendered.py
+
       - name: Run Django system checks
         run: python manage.py check
 
