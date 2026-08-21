@@ -25,8 +25,11 @@ jobs:
       DATABASE_ENGINE: sqlite
 
     steps:
-      - name: Check out repository
+      - name: Check out exact candidate revision
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -59,8 +62,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Check out repository
+      - name: Check out exact candidate revision
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -81,8 +87,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Check out GoreeCloud Tasks
+      - name: Check out exact GoreeCloud Tasks candidate
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Check out pinned GoreeCloud Manager integration revision
         uses: actions/checkout@v6
@@ -118,8 +127,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Check out GoreeCloud Tasks
+      - name: Check out exact GoreeCloud Tasks candidate
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Check out pinned GoreeCloud Manager production-readiness revision
         uses: actions/checkout@v6
@@ -139,8 +151,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Check out repository
+      - name: Check out exact candidate revision
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Validate disposable PostgreSQL backup and restoration
         run: bash scripts/validate_backup_restore.sh
@@ -168,8 +183,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Check out repository
+      - name: Check out exact candidate revision
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Prepare isolated CI configuration
         run: |
