@@ -1,0 +1,40 @@
+{
+  "schema": "goreecloud.tasks.waypoint.identity",
+  "version": 1,
+  "status": "active",
+  "product": {
+    "name": "GoreeCloud Tasks",
+    "short_name": "Tasks",
+    "capability_identity": "GoreeCloud Waypoint",
+    "capability_short_name": "Waypoint",
+    "preferred_presentation": "GoreeCloud Tasks — Powered by Waypoint"
+  },
+  "hierarchy": [
+    "GoreeCloud Suite",
+    "GoreeCloud Tasks",
+    "GoreeCloud Waypoint"
+  ],
+  "families": [
+    {"id": "capture", "name": "Waypoint Capture", "domain": "capture"},
+    {"id": "focus", "name": "Waypoint Focus", "domain": "current-attention"},
+    {"id": "horizon", "name": "Waypoint Horizon", "domain": "future-planning"},
+    {"id": "projects", "name": "Waypoint Projects", "domain": "structured-work"},
+    {"id": "rhythm", "name": "Waypoint Rhythm", "domain": "recurrence"},
+    {"id": "pulse", "name": "Waypoint Pulse", "domain": "reminders-and-attention-signals"},
+    {"id": "compass", "name": "Waypoint Compass", "domain": "search-filtering-and-navigation"},
+    {"id": "together", "name": "Waypoint Together", "domain": "collaboration"},
+    {"id": "operations", "name": "Waypoint Operations", "domain": "goreecloud-operational-work"},
+    {"id": "timeline", "name": "Waypoint Timeline", "domain": "scheduling-and-calendar-integration"},
+    {"id": "trail", "name": "Waypoint Trail", "domain": "activity-and-history"},
+    {"id": "archive", "name": "Waypoint Archive", "domain": "portability-and-continuity"}
+  ],
+  "authority": {
+    "task_data": "GoreeCloud Tasks",
+    "task_authorization": "GoreeCloud Tasks",
+    "native_calendar_events": "GoreeCloud Calendar",
+    "calendar_busy_time": "GoreeCloud Calendar",
+    "manager_operational_presentation": "GoreeCloud Manager"
+  },
+  "ui_rule": "Use familiar task-management nouns when they are clearer; use Waypoint family names for durable capability grouping and identity.",
+  "standalone_application": false
+}
