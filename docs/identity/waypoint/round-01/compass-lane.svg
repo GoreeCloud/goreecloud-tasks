@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Waypoint Compass Lane candidate</title>
+  <desc id="desc">A navigational ring surrounding a forward lane and destination chevron.</desc>
+  <defs>
+    <linearGradient id="bg" x1="80" y1="56" x2="432" y2="456" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A7F3D0"/>
+      <stop offset=".48" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#0F766E"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="142" fill="none" stroke="#FFFFFF" stroke-opacity=".34" stroke-width="30"/>
+  <path d="M256 106v44M406 256h-44M256 406v-44M106 256h44" stroke="#FFFFFF" stroke-opacity=".82" stroke-width="20" stroke-linecap="round"/>
+  <path d="M166 322c43 0 63-25 86-66 23-42 45-66 94-66" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="166" cy="322" r="24" fill="#FFFFFF"/>
+  <path d="M321 157l55 33-55 33" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
