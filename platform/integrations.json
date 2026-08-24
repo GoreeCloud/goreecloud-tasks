@@ -1,0 +1,52 @@
+{
+  "schema": "goreecloud.platform-integrations/v1",
+  "application": "GoreeCloud Tasks",
+  "implementation": "native",
+  "stableQualificationBlocked": true,
+  "systems": {
+    "glazeUI": {
+      "required": true,
+      "status": "implemented",
+      "contract": "current-stable",
+      "evidence": [
+        "native adaptive task interface",
+        "Glaze UI semantic tokens and interaction patterns",
+        "keyboard, focus, reduced-motion, contrast, and responsive behavior"
+      ]
+    },
+    "wardveilSecurity": {
+      "required": true,
+      "status": "implemented",
+      "evidence": [
+        "authenticated task operations",
+        "owner-scoped task data boundaries",
+        "controlled task-to-calendar projection boundary"
+      ]
+    },
+    "privacyShield": {
+      "required": true,
+      "status": "implemented",
+      "evidence": [
+        "private-by-default task ownership",
+        "bounded data projection into Calendar",
+        "no mandatory telemetry dependency"
+      ]
+    },
+    "everkeep": {
+      "required": true,
+      "status": "foundation",
+      "evidence": [
+        "recoverable task lifecycle semantics",
+        "source-controlled schema and migration history",
+        "preservation-oriented task and calendar interoperability contract"
+      ]
+    }
+  },
+  "openAcceptanceGates": [
+    "production-representative restore evidence and measured recovery objectives",
+    "production publication and monitoring acceptance",
+    "real-device Glaze UI acceptance",
+    "final Everkeep portability and recovery acceptance"
+  ],
+  "releaseBoundary": "Source integration evidence does not authorize production deployment or Stable qualification."
+}
