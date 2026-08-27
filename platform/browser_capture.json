@@ -1,0 +1,27 @@
+{
+  "schema": "goreecloud.browser-capture/v1",
+  "service": "GoreeCloud Tasks",
+  "destination": "https://tasks.goreecloud.com",
+  "acceptedKinds": ["page", "link", "selection"],
+  "requirements": {
+    "authenticated": true,
+    "reviewedAdapter": true,
+    "oneTimeIntent": true,
+    "privateBrowsingExportAllowed": false,
+    "capturedContentInURLAllowed": false,
+    "leastPrivilege": true,
+    "ownerScopedWrite": true
+  },
+  "implementation": {
+    "serviceWriteEndpointReady": false,
+    "browserAdapterReady": false,
+    "productionApproved": false
+  },
+  "openGates": [
+    "define and review authenticated task-capture endpoint",
+    "bind captured tasks to authenticated owner scope",
+    "define title, source-link, and optional selection mapping",
+    "complete Privacy Shield and Wardveil review",
+    "complete exact-build Browser and Tasks compatibility acceptance"
+  ]
+}
