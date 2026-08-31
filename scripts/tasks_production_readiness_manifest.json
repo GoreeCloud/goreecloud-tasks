@@ -6,7 +6,7 @@
     "approval_reference": null,
     "approved_at": null
   },
-  "declared_effective_check_count": 14,
+  "declared_effective_check_count": 15,
   "source_evidence_gates": [
     {
       "workflow_path": ".github/workflows/ci.yml",
@@ -69,6 +69,14 @@
         "production-recovery-evidence-contract"
       ],
       "evidence_scope": "fail-closed non-secret future production recovery record quality and go/no-go consistency"
+    },
+    {
+      "workflow_path": ".github/workflows/platform-system-contracts.yml",
+      "workflow_name": "Platform System Contracts",
+      "required_jobs": [
+        "validate"
+      ],
+      "evidence_scope": "mandatory native platform-system conformance, required integration evidence, and fail-closed Stable qualification"
     },
     {
       "workflow_path": ".github/workflows/production-readiness-evidence-manifest.yml",
