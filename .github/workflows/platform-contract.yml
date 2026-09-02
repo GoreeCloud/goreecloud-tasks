@@ -5,12 +5,14 @@ on:
     paths:
       - goreecloud.platform.yaml
       - .github/workflows/platform-contract.yml
+      - scripts/tasks_production_readiness_manifest.json
   push:
     branches:
       - main
     paths:
       - goreecloud.platform.yaml
       - .github/workflows/platform-contract.yml
+      - scripts/tasks_production_readiness_manifest.json
   workflow_dispatch:
 
 permissions:
@@ -23,15 +25,18 @@ concurrency:
 jobs:
   validate:
     name: Validate GoreeCloud platform declaration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      TASKS_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Checkout exact Tasks candidate
-        uses: actions/checkout@v5
+      - name: Check out exact Tasks candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Checkout pinned canonical platform contract
-        uses: actions/checkout@v5
+      - name: Check out pinned canonical platform contract
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: GoreeCloud/GoreeCloud
           ref: 2ff2e68756cad3e8d99b904b1f41ede8ee4319e5
@@ -47,7 +52,7 @@ jobs:
           --result-schema .goreecloud-platform/schemas/goreecloud.conformance-result.schema.json
           --rules .goreecloud-platform/contracts/goreecloud.platform-rules.v1.json
           --expected-repository "${{ github.repository }}"
-          --source-revision "${{ github.sha }}"
+          --source-revision "$TASKS_SOURCE_REVISION"
           --output conformance-result.json
       - name: Publish result to job summary
         shell: bash
