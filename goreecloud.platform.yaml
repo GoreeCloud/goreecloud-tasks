@@ -1,0 +1,159 @@
+schema_version: "1.0"
+component:
+  id: goreecloud.tasks
+  product_name: GoreeCloud Tasks
+  kind: application
+  repository: GoreeCloud/goreecloud-tasks
+  lifecycle: Development
+  version: "0.1"
+  supported_platforms:
+    - web
+    - linux-server
+  user_facing: true
+api:
+  version: "v1"
+  endpoints:
+    - id: health
+      method: GET
+      path: /health/
+      purpose: Non-sensitive application liveness interface.
+    - id: manager-operational-tasks
+      method: GET
+      path: /api/v1/manager/operational-tasks/
+      purpose: Read-only authorization-scoped operational task visibility for GoreeCloud Manager.
+glaze_ui:
+  applicable: true
+  required_version: "2.2.0"
+  implemented_version: null
+  migration_status: required
+  evidence:
+    - tasks-readme
+platform_systems:
+  manager:
+    status: "Applicable — Nonconformant"
+    justification: A read-only Manager integration exists, but canonical Mesh-backed platform registration and Manager Platform Overview acceptance are not established.
+    evidence:
+      - tasks-readme
+  identity:
+    status: "Applicable — Migration Required"
+    justification: Tasks currently owns a Django user model and has not completed accepted GoreeCloud Identity integration.
+    evidence:
+      - tasks-readme
+  wardveil_security:
+    status: "Applicable — Nonconformant"
+    justification: Strong authorization and secret boundaries exist, but Wardveil Security acceptance evidence is not yet recorded in the platform contract.
+    evidence:
+      - tasks-readme
+  privacy_shield:
+    status: "Applicable — Nonconformant"
+    justification: Privacy-first authorization and data minimization are implemented, but Privacy Shield acceptance evidence is not yet recorded in the platform contract.
+    evidence:
+      - tasks-readme
+  everkeep:
+    status: "Applicable — Nonconformant"
+    justification: Export and guarded restoration foundations exist, but production backup and isolated restoration validation remain explicit blockers.
+    evidence:
+      - tasks-readme
+  mesh:
+    status: "Applicable — Nonconformant"
+    justification: Tasks is not yet registered through the canonical Mesh platform declaration and evidence representation.
+    evidence:
+      - tasks-readme
+  glaze_ui:
+    status: "Applicable — Migration Required"
+    justification: Current Glaze UI 2.2.0 rendered, accessibility, and supported-platform acceptance evidence does not yet exist for Tasks.
+    evidence:
+      - tasks-readme
+mesh:
+  registration: required
+  capabilities:
+    - task-management
+    - project-collaboration
+    - portable-user-export
+  dependencies:
+    - goreecloud.mesh
+  published_events: []
+  consumed_events: []
+  evidence: []
+health:
+  liveness:
+    - method: GET
+      path: /health/
+  readiness: []
+recovery:
+  backup_required: true
+  backup_status: required_missing
+  restore_required: true
+  restore_status: required_missing
+  last_verified_restore: null
+  recovery_dependencies:
+    - PostgreSQL application data
+    - application configuration
+    - protected secrets
+    - deployment manifests
+  documentation:
+    - README.md
+  evidence:
+    - tasks-readme
+data_portability:
+  export_capability: implemented_unverified
+  export_formats:
+    - goreecloud-tasks-user-archive-json
+    - goreecloud-tasks-project-archive-json
+  last_export_validation: null
+  portability_requirements:
+    - preserve authorization boundaries during export
+    - preserve supported reminder and notification metadata
+    - validate clean-target restoration and relationship integrity
+  evidence:
+    - tasks-readme
+external_dependencies:
+  - id: postgresql
+    purpose: Planned production multi-user database.
+    required: true
+    compatibility: PostgreSQL-backed migrations and application behavior must remain validated.
+  - id: ntfy
+    purpose: Optional private reminder delivery.
+    required: false
+    compatibility: Uses a least-privilege publisher boundary with delivery-time authorization re-checks.
+compatibility:
+  platform_releases: []
+  api_requirements:
+    - goreecloud.tasks.manager.v1 for Manager operational visibility
+  schema_requirements:
+    - goreecloud.platform/1.0
+  component_requirements:
+    - Glaze UI 2.2.0
+    - GoreeCloud Identity accepted integration before Stable
+    - GoreeCloud Mesh platform registry v1 before Manager platform-overview acceptance
+conformance:
+  declared_state: migration_required
+  stable_eligible: false
+  checks:
+    - {id: glaze-ui, mandatory: true, status: pending, evidence: [tasks-readme], note: "Glaze UI 2.2 implementation and acceptance are incomplete."}
+    - {id: goreecloud-identity, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: wardveil-security, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: privacy-shield, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: everkeep-recovery, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: mesh-registration, mandatory: true, status: pending, evidence: []}
+    - {id: api-compatibility, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: accessibility, mandatory: true, status: pending, evidence: []}
+    - {id: platform-acceptance, mandatory: true, status: pending, evidence: []}
+    - {id: backup, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: restore, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: export-portability, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: security-validation, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: privacy-validation, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: required-documentation, mandatory: true, status: pass, evidence: [tasks-readme]}
+    - {id: required-tests, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: release-evidence, mandatory: true, status: pending, evidence: []}
+evidence:
+  acceptance:
+    - id: tasks-readme
+      kind: documentation
+      location: README.md
+      revision: null
+      observed_at: null
+      producer: GoreeCloud/goreecloud-tasks
+      description: Repository-local current implementation, authorization, portability, health, deployment, recovery-blocker, and validation documentation. Documentation alone does not satisfy implementation gates.
+  release: []
