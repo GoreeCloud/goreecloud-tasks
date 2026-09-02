@@ -6,219 +6,83 @@
     "approval_reference": null,
     "approved_at": null
   },
-  "declared_effective_check_count": 14,
+  "declared_effective_check_count": 15,
   "source_evidence_gates": [
     {
       "workflow_path": ".github/workflows/ci.yml",
       "workflow_name": "CI",
-      "required_jobs": [
-        "django",
-        "ntfy-integration",
-        "manager-cross-app",
-        "manager-final-topology",
-        "backup-restore",
-        "upgrade-rollback",
-        "docker-compose"
-      ],
+      "required_jobs": ["django", "ntfy-integration", "manager-cross-app", "manager-final-topology", "backup-restore", "upgrade-rollback", "docker-compose"],
       "evidence_scope": "application, authorization, integration, topology, backup/restore, upgrade/rollback, and container startup"
     },
     {
       "workflow_path": ".github/workflows/runtime-security-preflight.yml",
       "workflow_name": "Runtime Security Preflight",
-      "required_jobs": [
-        "runtime-security-preflight"
-      ],
+      "required_jobs": ["runtime-security-preflight"],
       "evidence_scope": "source-controlled and disposable runtime security posture"
     },
     {
       "workflow_path": ".github/workflows/private-publication-validation.yml",
       "workflow_name": "Private Publication Validation",
-      "required_jobs": [
-        "private-publication"
-      ],
+      "required_jobs": ["private-publication"],
       "evidence_scope": "private HTTPS publication, source-range restriction, backend isolation, and publication secret minimization"
     },
     {
       "workflow_path": ".github/workflows/monitoring-alert-readiness.yml",
       "workflow_name": "Monitoring Alert Readiness",
-      "required_jobs": [
-        "monitoring-alert-readiness"
-      ],
+      "required_jobs": ["monitoring-alert-readiness"],
       "evidence_scope": "disposable monitoring, outage/recovery transitions, notification ACLs, and alert-data minimization"
     },
     {
       "workflow_path": ".github/workflows/backup-operations-readiness.yml",
       "workflow_name": "Backup Operations Readiness",
-      "required_jobs": [
-        "backup-operations-readiness"
-      ],
+      "required_jobs": ["backup-operations-readiness"],
       "evidence_scope": "operational PostgreSQL recovery points, retention mechanism, integrity, missed-run detection, and backup recovery"
     },
     {
       "workflow_path": ".github/workflows/full-environment-recovery-readiness.yml",
       "workflow_name": "Full Environment Recovery Readiness",
-      "required_jobs": [
-        "full-environment-recovery-readiness"
-      ],
+      "required_jobs": ["full-environment-recovery-readiness"],
       "evidence_scope": "destructive disposable environment reconstruction, restored publication/health, and backup resumption"
     },
     {
       "workflow_path": ".github/workflows/production-recovery-evidence-contract.yml",
       "workflow_name": "Production Recovery Evidence Contract",
-      "required_jobs": [
-        "production-recovery-evidence-contract"
-      ],
+      "required_jobs": ["production-recovery-evidence-contract"],
       "evidence_scope": "fail-closed non-secret future production recovery record quality and go/no-go consistency"
+    },
+    {
+      "workflow_path": ".github/workflows/platform-contract.yml",
+      "workflow_name": "Platform contract",
+      "required_jobs": ["validate"],
+      "evidence_scope": "exact-revision machine-readable GoreeCloud platform declaration validation, computed nonconformance reporting, missing-evidence visibility, and fail-closed Stable eligibility semantics"
     },
     {
       "workflow_path": ".github/workflows/production-readiness-evidence-manifest.yml",
       "workflow_name": "Production Readiness Evidence Manifest",
-      "required_jobs": [
-        "production-readiness-evidence-manifest"
-      ],
+      "required_jobs": ["production-readiness-evidence-manifest"],
       "evidence_scope": "aggregate workflow/job inventory, target-environment evidence status, and production-approval consistency"
     }
   ],
   "target_environment_evidence": [
-    {
-      "id": "infrastructure-services-vm-runtime-inspection",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-file-ownership-permissions-and-secret-mounts",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-docker-engine-compose-and-container-state",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-adguard-private-dns",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-netbird-peer-group-policy-and-source-path",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-porkbun-dns01-and-public-tls",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-caddy-listeners-and-firewall",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-private-publication-and-authentication",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-multi-user-authorization-acceptance",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-uptime-kuma-registration-and-alert-receipt",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-backup-repository-schedule-retention-and-monitoring",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "independent-off-host-or-off-site-recovery-copy",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-recovery-credentials-independent-availability",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "proxmox-vm-backup-and-dedicated-backup-server-recovery",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-full-environment-recovery-test",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-backup-resumption-after-recovery",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-capacity-and-recovery-time-evidence",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-manager-integration-identity-network-and-credential",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-ntfy-identity-acl-schedule-and-end-client-delivery",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    },
-    {
-      "id": "production-documentation-and-recovery-records",
-      "status": "outstanding",
-      "evidence_reference": null,
-      "verified_at": null,
-      "verified_by": null
-    }
+    {"id": "infrastructure-services-vm-runtime-inspection", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-file-ownership-permissions-and-secret-mounts", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-docker-engine-compose-and-container-state", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-adguard-private-dns", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-netbird-peer-group-policy-and-source-path", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-porkbun-dns01-and-public-tls", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-caddy-listeners-and-firewall", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-private-publication-and-authentication", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-multi-user-authorization-acceptance", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-uptime-kuma-registration-and-alert-receipt", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-backup-repository-schedule-retention-and-monitoring", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "independent-off-host-or-off-site-recovery-copy", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-recovery-credentials-independent-availability", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "proxmox-vm-backup-and-dedicated-backup-server-recovery", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-full-environment-recovery-test", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-backup-resumption-after-recovery", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-capacity-and-recovery-time-evidence", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-manager-integration-identity-network-and-credential", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-ntfy-identity-acl-schedule-and-end-client-delivery", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null},
+    {"id": "production-documentation-and-recovery-records", "status": "outstanding", "evidence_reference": null, "verified_at": null, "verified_by": null}
   ]
 }
