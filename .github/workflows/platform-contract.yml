@@ -1,0 +1,58 @@
+name: Platform contract
+
+on:
+  pull_request:
+    paths:
+      - goreecloud.platform.yaml
+      - .github/workflows/platform-contract.yml
+  push:
+    branches:
+      - main
+    paths:
+      - goreecloud.platform.yaml
+      - .github/workflows/platform-contract.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-contract-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate GoreeCloud platform declaration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact Tasks candidate
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Checkout pinned canonical platform contract
+        uses: actions/checkout@v5
+        with:
+          repository: GoreeCloud/GoreeCloud
+          ref: 2ff2e68756cad3e8d99b904b1f41ede8ee4319e5
+          path: .goreecloud-platform
+          persist-credentials: false
+      - name: Install validator dependencies
+        run: python3 -m pip install --requirement .goreecloud-platform/requirements-platform-contract.txt
+      - name: Validate declaration and compute conformance
+        run: >-
+          python3 .goreecloud-platform/scripts/validate_platform_contract.py
+          goreecloud.platform.yaml
+          --schema .goreecloud-platform/schemas/goreecloud.platform.schema.json
+          --result-schema .goreecloud-platform/schemas/goreecloud.conformance-result.schema.json
+          --rules .goreecloud-platform/contracts/goreecloud.platform-rules.v1.json
+          --expected-repository "${{ github.repository }}"
+          --source-revision "${{ github.sha }}"
+          --output conformance-result.json
+      - name: Publish result to job summary
+        shell: bash
+        run: |
+          echo '## GoreeCloud platform conformance' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat conformance-result.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
