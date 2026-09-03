@@ -1,4 +1,4 @@
-schema_version: "0.1"
+schema_version: "0.2"
 
 component:
   type: application
@@ -26,7 +26,7 @@ api:
 
 platform_systems:
   manager:
-    status: partial
+    result: applicable-blocked
     version: null
     evidence:
       - docs/manager-api.md
@@ -35,31 +35,31 @@ platform_systems:
       - docs/manager-integration-credential-lifecycle.md
     notes: A source-level read-only Manager integration and dedicated validation exist, but canonical Mesh-backed platform registration and production Manager integration acceptance remain incomplete.
   privacy_shield:
-    status: planned
+    result: applicable-blocked
     version: null
     evidence: []
     notes: Tasks implements privacy-first authorization and data-minimization behavior, but no accepted Privacy Shield integration is established by current source evidence.
   wardveil_security:
-    status: planned
+    result: applicable-blocked
     version: null
     evidence: []
     notes: Tasks has substantive security and secret-handling controls, but no accepted Wardveil Security integration is established by current source evidence.
   everkeep:
-    status: planned
+    result: applicable-blocked
     version: null
     evidence: []
     notes: Tasks has backup, restoration, and export foundations, but accepted Everkeep integration and target-environment restore evidence remain incomplete.
   glaze_ui:
-    status: partial
+    result: applicable-migration-required
     version: "1.0.0"
     evidence:
       - docs/glaze-ui.md
       - static/css/glaze.css
       - scripts/validate_glaze_ui_consumer.py
       - scripts/validate_glaze_ui_rendered.py
-    notes: Repository-local GLAZE UI V1.0 source mapping and automated validation are present. Exact-head application acceptance, upstream V1 production eligibility, release approval, and production deployment acceptance remain incomplete.
+    notes: Repository-local GLAZE UI V1.0 source mapping and automated validation are present. Migration and exact-revision application acceptance against current Stable GLAZE UI V1.1 / 1.1.0 remain incomplete.
   mesh:
-    status: planned
+    result: applicable-blocked
     version: null
     evidence: []
     notes: Canonical GoreeCloud Mesh registration, producer evidence publication, and runtime acceptance have not been established for Tasks.
@@ -68,7 +68,7 @@ platform_systems:
     published_events: []
     consumed_events: []
   identity:
-    status: planned
+    result: applicable-blocked
     version: null
     evidence:
       - README.md
@@ -112,11 +112,17 @@ external_dependencies:
     required: false
 
 compatibility:
+  platform_contract: "0.2"
+  glaze_ui_required: "1.1.0"
   requires:
-    - goreecloud-platform-contract>=0.1
-    - glaze-ui==1.0.0
+    - goreecloud-platform-contract==0.2
+    - glaze-ui==1.1.0
   provides:
     - goreecloud.tasks.manager.v1
+
+evidence:
+  acceptance_tests: []
+  release: []
 
 conformance:
   status: nonconformant
@@ -137,7 +143,7 @@ conformance:
     - docs/feature-portable-export.md
     - scripts/tasks_production_readiness_manifest.json
   blockers:
-    - GLAZE UI V1.0 consumer promotion is incomplete; the repository-local source mapping still requires exact-head application acceptance, applicable upstream production eligibility, release approval, and production deployment acceptance.
+    - Migration and exact-revision acceptance against current Stable GLAZE UI V1.1 / 1.1.0 are incomplete.
     - GoreeCloud Identity integration and migration are incomplete.
     - Wardveil Security integration and acceptance are not established.
     - Privacy Shield integration and acceptance are not established.
@@ -145,4 +151,5 @@ conformance:
     - GoreeCloud Mesh registration, evidence publication, and runtime acceptance are not established.
     - Production Manager identity, network, credential, and end-to-end integration evidence remain outstanding.
     - Target-environment production, monitoring, recovery, publication, and release evidence remain outstanding.
+    - Required Stable acceptance-test and published release evidence has not been produced.
     - Platform Contract adoption does not by itself authorize Stable qualification or production deployment.
