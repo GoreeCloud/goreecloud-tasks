@@ -114,159 +114,160 @@ def build_snapshots(root: Path) -> None:
 
 def acceptance_page() -> str:
     pages = ",".join(f'"{name}"' for name in SNAPSHOTS)
-    return f'''<!doctype html>
+    page = """<!doctype html>
 <html lang="en" data-status="pending">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tasks GLAZE UI V1.0 rendered acceptance</title>
 <style>
-html,body{{margin:0;padding:0;background:#fff;color:#000;font:14px system-ui,sans-serif}}
-iframe{{display:block;width:100vw;height:1000px;border:0}}
-#result{{position:fixed;inset:auto 0 0;z-index:9999;margin:0;padding:8px;background:#fff;color:#000;white-space:pre-wrap}}
+html,body{margin:0;padding:0;background:#fff;color:#000;font:14px system-ui,sans-serif}
+iframe{display:block;width:100vw;height:1000px;border:0}
+#result{position:fixed;inset:auto 0 0;z-index:9999;margin:0;padding:8px;background:#fff;color:#000;white-space:pre-wrap}
 </style>
 </head>
 <body>
 <div id="frames"></div><pre id="result">PENDING</pre>
 <script>
-const pages=[{pages}];
+const pages=[__PAGES__];
 const params=new URLSearchParams(location.search);
 const expectedTheme=params.get('theme')||'light';
 const mode=params.get('mode')||'normal';
 const failures=[];
-const note=(ok,message)=>{{if(!ok) failures.push(message)}};
-const durationMs=value=>Math.max(...value.split(',').map(part=>{{
+const note=(ok,message)=>{if(!ok) failures.push(message)};
+const durationMs=value=>Math.max(...value.split(',').map(part=>{
   const item=part.trim();
   if(item.endsWith('ms')) return parseFloat(item)||0;
   if(item.endsWith('s')) return (parseFloat(item)||0)*1000;
   return 0;
-}}));
+}));
 
-function visible(element){{
+function visible(element){
   const style=getComputedStyle(element);
   const rect=element.getBoundingClientRect();
   return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
-}}
+}
 
-function applyMode(root){{
-  if(mode==='touch-assistance'){{
+function applyMode(root){
+  if(mode==='touch-assistance'){
     root.dataset.glzInput='touch';
     root.dataset.glzTouchAssistance='true';
-  }} else if(mode==='text-200'){{
+  } else if(mode==='text-200'){
     root.dataset.glzTextScale='200';
-  }} else if(mode==='reduced-transparency'){{
+  } else if(mode==='reduced-transparency'){
     root.dataset.glzTransparency='reduced';
-  }} else if(mode==='increased-contrast'){{
+  } else if(mode==='increased-contrast'){
     root.dataset.mode='increased-contrast';
-  }}
-}}
+  }
+}
 
-function inspect(frame,name){{
+function inspect(frame,name){
   const doc=frame.contentDocument;
   const win=frame.contentWindow;
-  note(Boolean(doc),`${name} has no contentDocument`);
+  note(Boolean(doc),name+' has no contentDocument');
   if(!doc) return;
 
   const root=doc.documentElement;
   applyMode(root);
   const rootStyle=win.getComputedStyle(root);
-  note(root.dataset.glazeUi==='1.0.0',`${name} lost data-glaze-ui=1.0.0`);
-  note(root.dataset.glazeSourceRevision==='70909bbdccad378fb7281ae1842e2f5beed64c38',`${name} lost exact canonical V1 source provenance`);
-  note(root.dataset.glazeConsumerStatus==='migration-in-progress',`${name} overclaimed downstream acceptance`);
+  note(root.dataset.glazeUi==='1.0.0',name+' lost data-glaze-ui=1.0.0');
+  note(root.dataset.glazeSourceRevision==='70909bbdccad378fb7281ae1842e2f5beed64c38',name+' lost exact canonical V1 source provenance');
+  note(root.dataset.glazeConsumerStatus==='migration-in-progress',name+' overclaimed downstream acceptance');
 
   const sheets=[...doc.querySelectorAll('link[rel=stylesheet]')].map(link=>link.getAttribute('href')||'');
-  note(sheets.length>0&&sheets[sheets.length-1].includes('css/glaze.css'),`${name} does not load glaze.css last`);
-  note(rootStyle.getPropertyValue('--tasks-glaze-version').trim().replaceAll('"','')==='1.0.0',`${name} lost V1 source marker`);
-  note(rootStyle.getPropertyValue('--tasks-glaze-source-revision').trim().replaceAll('"','')==='70909bbdccad378fb7281ae1842e2f5beed64c38',`${name} lost source revision token`);
-  note(rootStyle.getPropertyValue('--glz1-target-shell').trim()==='48px',`${name} lost 48px V1 target token`);
-  note(rootStyle.getPropertyValue('--glz1-target-assisted').trim()==='56px',`${name} lost 56px assisted target token`);
+  note(sheets.length>0&&sheets[sheets.length-1].includes('css/glaze.css'),name+' does not load glaze.css last');
+  note(rootStyle.getPropertyValue('--tasks-glaze-version').trim().replaceAll('"','')==='1.0.0',name+' lost V1 source marker');
+  note(rootStyle.getPropertyValue('--tasks-glaze-source-revision').trim().replaceAll('"','')==='70909bbdccad378fb7281ae1842e2f5beed64c38',name+' lost source revision token');
+  note(rootStyle.getPropertyValue('--glz1-target-shell').trim()==='48px',name+' lost 48px V1 target token');
+  note(rootStyle.getPropertyValue('--glz1-target-assisted').trim()==='56px',name+' lost 56px assisted target token');
 
-  if(mode==='forced-colors'){{
-    note(rootStyle.getPropertyValue('--glz1-canvas').trim().toLowerCase()==='canvas',`${name} did not activate forced-colors Canvas semantics`);
-    note(rootStyle.getPropertyValue('--glz1-focus').trim().toLowerCase()==='highlight',`${name} did not activate forced-colors Highlight focus semantics`);
-  }} else {{
+  if(mode==='forced-colors'){
+    note(rootStyle.getPropertyValue('--glz1-canvas').trim().toLowerCase()==='canvas',name+' did not activate forced-colors Canvas semantics');
+    note(rootStyle.getPropertyValue('--glz1-focus').trim().toLowerCase()==='highlight',name+' did not activate forced-colors Highlight focus semantics');
+  } else {
     const expectedCanvas=expectedTheme==='dark'?'#0b0d11':'#f5f7fa';
-    note(rootStyle.getPropertyValue('--glz1-canvas').trim().toLowerCase()===expectedCanvas,`${name} did not activate ${expectedTheme} V1 tokens`);
-  }}
+    note(rootStyle.getPropertyValue('--glz1-canvas').trim().toLowerCase()===expectedCanvas,name+' did not activate '+expectedTheme+' V1 tokens');
+  }
 
-  if(mode==='touch-assistance'){{
-    note(root.dataset.glzInput==='touch',`${name} did not enter explicit touch input mode`);
-    note(root.dataset.glzTouchAssistance==='true',`${name} did not enter Touch Assistance mode`);
-  }}
-  if(mode==='text-200'){{
-    note(root.dataset.glzTextScale==='200',`${name} did not enter explicit 200% text mode`);
-    note(parseFloat(rootStyle.fontSize)>=31.5,`${name} 200% text scale did not reach 32px-equivalent root text`);
-  }}
-  if(mode==='increased-contrast'){{
-    note(rootStyle.getPropertyValue('--glz1-focus-width').trim()==='4px',`${name} increased contrast did not strengthen focus geometry`);
-  }}
+  if(mode==='touch-assistance'){
+    note(root.dataset.glzInput==='touch',name+' did not enter explicit touch input mode');
+    note(root.dataset.glzTouchAssistance==='true',name+' did not enter Touch Assistance mode');
+  }
+  if(mode==='text-200'){
+    note(root.dataset.glzTextScale==='200',name+' did not enter explicit 200% text mode');
+    note(parseFloat(rootStyle.fontSize)>=31.5,name+' 200% text scale did not reach 32px-equivalent root text');
+  }
+  if(mode==='increased-contrast'){
+    note(rootStyle.getPropertyValue('--glz1-focus-width').trim()==='4px',name+' increased contrast did not strengthen focus geometry');
+  }
 
-  note(doc.documentElement.scrollWidth<=frame.clientWidth+1,`${name} horizontally overflows ${frame.clientWidth}px viewport: ${doc.documentElement.scrollWidth}px`);
+  note(doc.documentElement.scrollWidth<=frame.clientWidth+1,name+' horizontally overflows '+frame.clientWidth+'px viewport: '+doc.documentElement.scrollWidth+'px');
 
   const controls=[...doc.querySelectorAll('button,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea,a.nav-item,a.secondary-link,a.button')].filter(visible);
-  note(controls.length>0,`${name} exposes no representative interactive controls`);
-  for(const control of controls){{
+  note(controls.length>0,name+' exposes no representative interactive controls');
+  for(const control of controls){
     const rect=control.getBoundingClientRect();
     if(control.matches('textarea')) continue;
     const minimum=mode==='touch-assistance'?55.5:47.5;
-    note(rect.height>=minimum,`${name} control below ${mode==='touch-assistance'?'56':'48'}px: ${control.tagName}.${control.className} = ${rect.height.toFixed(1)}px`);
-  }}
+    note(rect.height>=minimum,name+' control below '+(mode==='touch-assistance'?'56':'48')+'px: '+control.tagName+'.'+control.className+' = '+rect.height.toFixed(1)+'px');
+  }
 
   const completion=doc.querySelector('.complete-button');
-  if(completion&&visible(completion)){{
+  if(completion&&visible(completion)){
     const rect=completion.getBoundingClientRect();
     const minimum=mode==='touch-assistance'?55.5:47.5;
-    note(rect.width>=minimum&&rect.height>=minimum,`${name} completion target is ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`);
-  }}
+    note(rect.width>=minimum&&rect.height>=minimum,name+' completion target is '+rect.width.toFixed(1)+'x'+rect.height.toFixed(1));
+  }
 
   const nav=doc.querySelector('.nav-item');
-  if(nav&&visible(nav)){{
+  if(nav&&visible(nav)){
     const minimum=mode==='touch-assistance'?55.5:47.5;
-    note(nav.getBoundingClientRect().height>=minimum,`${name} navigation target is below V1 floor`);
-  }}
+    note(nav.getBoundingClientRect().height>=minimum,name+' navigation target is below V1 floor');
+  }
 
-  if(mode==='reduced-motion'){{
+  if(mode==='reduced-motion'){
     const motionTarget=controls[0]||doc.body;
-    note(durationMs(win.getComputedStyle(motionTarget).transitionDuration)<=0.1,`${name} reduced-motion transition remains active`);
-  }}
-  if(mode==='reduced-transparency'){{
-    for(const surface of doc.querySelectorAll('.topbar,.sidebar')){{
+    note(durationMs(win.getComputedStyle(motionTarget).transitionDuration)<=0.1,name+' reduced-motion transition remains active');
+  }
+  if(mode==='reduced-transparency'){
+    for(const surface of doc.querySelectorAll('.topbar,.sidebar')){
       if(!visible(surface)) continue;
       const style=win.getComputedStyle(surface);
-      note(style.backdropFilter==='none'||style.webkitBackdropFilter==='none',`${name} reduced transparency left backdrop filtering active`);
-    }}
-  }}
-}}
+      note(style.backdropFilter==='none'||style.webkitBackdropFilter==='none',name+' reduced transparency left backdrop filtering active');
+    }
+  }
+}
 
-async function run(){{
-  note(matchMedia(`(prefers-color-scheme: ${expectedTheme})`).matches,`browser did not enter expected ${expectedTheme} color scheme`);
+async function run(){
+  note(matchMedia('(prefers-color-scheme: '+expectedTheme+')').matches,'browser did not enter expected '+expectedTheme+' color scheme');
   if(mode==='reduced-motion') note(matchMedia('(prefers-reduced-motion: reduce)').matches,'browser did not activate reduced motion');
   if(mode==='forced-colors') note(matchMedia('(forced-colors: active)').matches,'browser did not activate forced colors');
 
   const host=document.getElementById('frames');
-  const frames=pages.map(name=>{{
+  const frames=pages.map(name=>{
     const frame=document.createElement('iframe');
     frame.dataset.page=name;
-    frame.src=`/${name}.html`;
+    frame.src='/'+name+'.html';
     host.appendChild(frame);
     return frame;
-  }});
-  await Promise.all(frames.map(frame=>new Promise(resolve=>frame.addEventListener('load',resolve,{{once:true}}))));
+  });
+  await Promise.all(frames.map(frame=>new Promise(resolve=>frame.addEventListener('load',resolve,{once:true}))));
   await new Promise(resolve=>setTimeout(resolve,150));
   for(const frame of frames) inspect(frame,frame.dataset.page);
 
   const result=document.getElementById('result');
-  if(failures.length){{
+  if(failures.length){
     document.documentElement.dataset.status='fail';
     result.textContent='FAIL\n'+failures.join('\n');
-  }} else {{
+  } else {
     document.documentElement.dataset.status='pass';
     result.textContent='PASS';
-  }}
-}}
+  }
+}
 run();
 </script>
-</body></html>'''
+</body></html>"""
+    return page.replace("__PAGES__", pages)
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
