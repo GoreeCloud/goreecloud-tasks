@@ -446,6 +446,53 @@ a.task-title:hover {
   background: rgba(35, 134, 54, 0.14);
 }
 
+/* Browser zoom and large-text reflow are layout concerns, independent of material styling. */
+body,
+.topbar,
+.account,
+.app-shell,
+.sidebar,
+.task-panel,
+.panel-heading,
+.quick-add,
+.quick-add-main,
+.quick-add-options,
+.task-row,
+.task-content,
+.task-editor,
+.editor-actions,
+.danger-zone,
+.auth-shell,
+.auth-card,
+.stacked-form {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.brand,
+.account,
+.nav-item,
+.panel-heading,
+.task-panel,
+.task-content,
+.task-title,
+.task-description,
+.task-meta,
+.field-group,
+.danger-zone,
+.auth-card,
+.notice {
+  overflow-wrap: anywhere;
+}
+
+button,
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @media (max-width: 900px) {
   .quick-add-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -457,15 +504,29 @@ a.task-title:hover {
     padding: 0 16px;
   }
 
+  .account {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .account > *,
+  .account form {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .account span {
     display: none;
   }
 
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
+    min-width: 0;
+    max-width: 100%;
     flex-direction: row;
     overflow-x: auto;
     padding: 10px 12px;
@@ -474,8 +535,12 @@ a.task-title:hover {
   }
 
   .nav-item {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
     min-height: 36px;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .nav-item small {
@@ -483,23 +548,40 @@ a.task-title:hover {
   }
 
   .task-panel {
+    min-width: 0;
+    max-width: 100%;
     padding: 28px 18px;
   }
 
   .quick-add-main,
   .quick-add-options {
-    grid-template-columns: 1fr;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .panel-heading,
   .danger-zone {
+    min-width: 0;
+    max-width: 100%;
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .panel-heading > *,
+  .danger-zone > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .primary-button.compact {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .flash-region {
     top: 70px;
     right: 12px;
+    max-width: calc(100vw - 24px);
     width: calc(100vw - 24px);
   }
 }

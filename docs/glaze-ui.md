@@ -1,113 +1,119 @@
-# GoreeCloud Tasks — Glaze UI Consumer Contract
+# GoreeCloud Tasks — GLAZE UI V1.0 Consumer Contract
 
 ## Status
 
-- **Target:** Glaze UI 1.3.0 Stable semantic contract
-- **Consumer status:** Adoption Candidate
-- **Canonical Glaze UI source reviewed:** `GoreeCloud/glaze-ui` at `96cc27050c098a5f06f571923f0cb9be54989a92`
+- **Target:** GLAZE UI V1.0 (`1.0.0`)
+- **Upstream lifecycle:** Official reset baseline; production acceptance pending
+- **Tasks consumer status:** **Migration in progress**
+- **Canonical repository:** `GoreeCloud/goreecloud-glaze-ui`
+- **Exact source authority:** `70909bbdccad378fb7281ae1842e2f5beed64c38`
 - **Product identity:** GoreeCloud Tasks / GoreeCloud Waypoint
-- **Scope:** Django-rendered web interface in this repository
+- **Scope:** Django-rendered web interface controlled by this repository
 
-This record establishes a version-specific Glaze UI adoption contract for GoreeCloud Tasks. It does **not** claim that Tasks has completed production visual acceptance. Source-level conformance and application-level visual acceptance are separate gates.
+This record defines the repository-local GLAZE UI V1.0 mapping for GoreeCloud Tasks. It does **not establish production acceptance**, Production Stable status, or V1 consumer conformance. The V1 namespace is official, but upstream production eligibility and downstream application acceptance remain separately gated.
+
+## Authority boundary
+
+The V1 implementation-facing authority is the canonical Glaze repository at the exact source revision above, including `VERSION`, `GLAZE_UI_V1_0.md`, `registry/lifecycle.json`, `css/glaze-v1.0.0.css`, V1 component/System Shell contracts, `acceptance/v1.0-stable.md`, and `scripts/validate_glaze_v1.py`.
+
+Tasks does not create a competing design system. `static/css/glaze.css` is a repository-local consumer mapping that mirrors the applicable canonical `glz1` semantic roles while preserving Tasks-specific workflows and composition. The local mapping is intentionally self-contained: no remote font, icon, stylesheet, analytics, tracking, or presentation dependency is introduced.
 
 ## Adoption model
 
-Tasks does not copy the canonical Glaze UI reference stylesheet wholesale. The existing Tasks interface remains product-specific and keeps its Waypoint task-management composition. `static/css/glaze.css` maps the existing interface onto Glaze UI 1.3 semantic roles and loads after the product styles so the shared contract can correct accessibility, theme, material, target, and resilience behavior without erasing product identity.
+The repository-level boundary is:
 
-The repository-level contract is:
+1. Django templates preserve semantic structure and task workflows.
+2. Product CSS preserves Tasks/Waypoint composition.
+3. `static/css/glaze.css` maps the controlled presentation onto V1 `glz1` semantics and loads after product CSS.
+4. `scripts/validate_glaze_ui_consumer.py` fails closed on source-contract regressions.
+5. `scripts/validate_glaze_ui_rendered.py` renders representative Django surfaces in Chromium and checks geometry, reflow, appearance, and accessibility modes.
+6. Exact-head CI, application visual/accessibility acceptance, upstream production eligibility, release approval, deployment acceptance, and overall Platform Stable eligibility remain separate gates.
 
-1. existing Django templates preserve semantic HTML and application workflows;
-2. existing product CSS preserves task-specific composition;
-3. `static/css/glaze.css` provides the shared Glaze semantic compatibility layer;
-4. `scripts/validate_glaze_ui_consumer.py` fails closed if the contract regresses;
-5. application-level visual acceptance remains required before the consumer can be promoted from Adoption Candidate to an aligned Stable consumer in the central Glaze registry.
+## V1 presentation rule
 
-## Stable semantic mapping
+**Solid where users read or make explicit critical decisions. Glazed where users interact with transient navigation, command, search, control, or feedback chrome.**
 
-### Color and themes
+Tasks therefore keeps durable task, project, collaboration, authentication, notification, data-portability, and critical-decision content on solid/raised surfaces. Top-level navigation and transient feedback chrome may use bounded Glaze material.
 
-Tasks maps the canonical Glaze UI 1.3 light and dark semantic colors into local CSS custom properties. The interface follows the operating-system/browser color-scheme preference and declares `light dark` support.
+Tasks does not add Universal Search, Control Center, Signature, Intelligence, or other V1 features merely to claim coverage. Existing Tasks search remains application search unless it is intentionally implemented against the applicable V1 system contract.
 
-The compatibility layer includes semantic roles for:
+## Semantic mapping
 
-- canvas and canvas accent;
-- surface, strong surface, and muted surface;
-- primary and muted text;
-- line/border treatment;
-- primary and secondary accent;
-- on-accent text;
-- information, success, warning, and danger;
-- focus ring and text selection.
+The local layer uses the canonical V1 namespace for applicable roles, including:
 
-No remote font, icon, analytics, or presentation dependency is introduced by the Glaze layer.
+- `--glz1-canvas`, `--glz1-base`, and `--glz1-raised`;
+- `--glz1-text-primary`, `--glz1-text-secondary`, and `--glz1-line`;
+- `--glz1-focus`, `--glz1-success`, `--glz1-warning`, and `--glz1-critical`;
+- `--glz1-overlay-bg`, `--glz1-overlay-blur`, and V1 surface geometry;
+- `--glz1-target-shell: 48px` and `--glz1-target-assisted: 56px`;
+- explicit Deep Dark, Reduced Transparency, Increased Contrast, Forced Colors, Reduced Motion, large-text, touch, and Touch Assistance host states.
 
-### Surface hierarchy
+The Tasks compatibility layer may contain product-specific selectors, but it must not redefine a competing GoreeCloud design-language authority.
 
-Tasks uses the Glaze material hierarchy selectively:
+## Material and critical-state boundaries
 
-- **Canvas** is the application background.
-- **Functional Glass** is limited to top-level navigation chrome (`.topbar` and `.sidebar`).
-- **Solid/Raised** surfaces remain the default for task editors, quick-add, project cards, notification cards, panels, authentication cards, and other ordinary content.
-- A solid fallback replaces glass when backdrop filtering is unavailable or reduced transparency is requested.
+`.topbar` and `.sidebar` are treated as bounded System Overlay navigation chrome. Nested backdrop blur is suppressed. Durable reading and editing surfaces remain solid or raised.
 
-Tasks does not use Clear Glass because the current product surfaces are not controls floating over visually rich media.
+Destructive actions, privacy warnings, authentication decisions, errors, and other critical decisions remain certainty-first and effects-free. Glaze presentation must never manufacture authorization, privacy, security, backup, recovery, identity, or trust state owned by another GoreeCloud system.
 
-### Actionable targets
+## Input and target geometry
 
-The compatibility layer enforces the Glaze UI 1.3 minimum actionable target of **44 CSS pixels** for ordinary buttons, text-like controls, inputs, selects, navigation items, and the task completion control.
+V1 requires a 48 CSS-pixel reference floor for touch-oriented application controls and 56 CSS pixels for Touch Assistance or far-view contexts where applicable.
 
-Checkboxes and radio controls keep native control geometry, while their interactive label rows receive the minimum target size.
+Tasks enforces those floors for buttons, text-like controls, navigation items, interactive label rows, and the task completion control. The explicit V1 host vocabulary includes `data-glz-input="touch"` and `data-glz-touch-assistance="true"` so target behavior is testable independently of pointer heuristics.
 
-This specifically corrects pre-adoption Tasks controls that were smaller than the Stable Glaze minimum, including the previous 24-pixel completion control and 36–42-pixel navigation rows.
+## Accessibility and resilience
 
-### Focus and selection
+The migration includes:
 
-Keyboard focus uses the shared semantic focus-ring color, width, and offset through `:focus-visible` across links, buttons, form controls, and disclosure summaries. Text selection uses the shared semantic selection role.
+- a keyboard skip link and stable main-content focus target;
+- visible deterministic focus and `:focus-visible` treatment;
+- 200% text/reflow support without document-level horizontal overflow on the representative handheld gate;
+- Reduced Motion;
+- Reduced Transparency;
+- Increased Contrast;
+- Forced Colors;
+- explicit touch and Touch Assistance geometry;
+- no-backdrop-filter solid fallback;
+- reduced-performance effects-free fallback;
+- semantic status treatment that does not depend on color alone where the existing component structure permits non-color state.
 
-Existing Django form labels and validation messages remain visible rather than becoming placeholder-only fields.
+Accessibility and capability outrank optical effects. Removing blur, shadow, or nonessential motion must not remove controls, state, target geometry, or authorization boundaries.
 
-### Motion and resilience
+## Automated rendered evidence
 
-The compatibility layer provides:
+`scripts/validate_glaze_ui_rendered.py` builds real Django snapshots for:
 
-- reduced-motion handling that removes nonessential transition/animation duration;
-- reduced-transparency solid-surface fallback;
-- increased-contrast border reinforcement;
-- forced-colors semantic remapping and visible focus/selection behavior;
-- no-backdrop-filter solid navigation fallback.
+- dashboard;
+- task detail;
+- notification settings;
+- data/portability;
+- login.
 
-These are fail-closed source requirements in the repository validator.
+It checks representative Light and Dark rendering at handheld and desktop sizes, plus Reduced Motion, Forced Colors, Touch Assistance, 200% text, Reduced Transparency, and Increased Contrast cases.
 
-### Adaptive layout
+A green automated rendered gate is application-specific automated evidence only. It is not Human Visual Excellence approval, upstream V1 Production Stable acceptance, release approval, or production deployment acceptance.
 
-Tasks retains its current Stable 1.3 adaptive-window behavior rather than adopting the separate Glaze UI 1.4 form-factor Candidate. Existing breakpoints transform the sidebar, quick-add composition, project/member layouts, collaboration panes, notification layouts, and other task-management surfaces for narrower windows.
+## Platform Contract relationship
 
-This contract does **not** import or claim Glaze UI 1.4 Mobile/Tablet/Desktop/TV semantics.
+`goreecloud.platform.yaml` records the repository-local V1 source migration as `partial` and keeps overall conformance `nonconformant`. The Glaze entry may name version `1.0.0` because this branch implements the repository-local source mapping, but that version field is not a conformance or production-eligibility claim.
 
-## Candidate boundaries
-
-The following remain outside this source-level adoption claim:
-
-- final browser-rendered light/dark acceptance of representative Tasks workflows;
-- 200% browser zoom/reflow acceptance;
-- visual inspection of keyboard-focus sequences across representative workflows;
-- application-specific forced-colors and reduced-motion visual review;
-- native Mobile/Tablet/Desktop/TV acceptance from the Glaze UI 1.4 Candidate;
-- production deployment or runtime migration.
-
-Until the applicable visual acceptance evidence is completed, the repository must describe the Glaze consumer state as **Adoption Candidate** rather than Stable-aligned production acceptance.
+Documentation and source presence cannot satisfy unrelated Identity, Wardveil Security, Privacy Shield, Everkeep, Mesh, Manager, recovery, release, deployment, or platform-acceptance gates.
 
 ## Promotion conditions
 
-Tasks may be promoted to an aligned current-Stable consumer in the central Glaze registry only after:
+Tasks may advance beyond migration-in-progress only when the applicable current requirements are satisfied against the exact final Tasks revision, including:
 
-1. this source contract passes on the exact final Tasks candidate SHA;
-2. the normal Tasks CI suite passes on that exact SHA;
-3. representative rendered Tasks workflows are accepted in light and dark appearances;
-4. keyboard focus, 44-pixel targets, reflow, reduced motion, contrast/forced-colors, and no-backdrop-filter behavior are accepted where applicable;
-5. no required visual gate is weakened to obtain a pass;
-6. the final Tasks merge commit is recorded in the central Glaze consumer registry.
+1. source-contract validation;
+2. normal Tasks CI;
+3. automated rendered browser validation;
+4. application-specific accessibility and visual review where automation is insufficient;
+5. upstream GLAZE UI V1.0 production eligibility when required for consumer promotion;
+6. release and deployment approval;
+7. evidence-backed Platform Contract updates.
+
+No gate may be weakened to obtain a pass, and no pre-reset Glaze acceptance is inherited as V1 evidence.
 
 ## Rollback
 
-If this adoption layer causes a regression, revert the Tasks adoption commit/merge rather than changing the canonical Glaze UI 1.3 contract or weakening the consumer validator. The pre-adoption Tasks application remains the rollback baseline.
+If this V1 migration causes a regression, revert the exact Tasks migration commit or merge to the previously accepted Tasks revision rather than weakening the canonical V1 contract or its validators. The rollback reference is an exact known-good Tasks commit, not a retired Glaze product version.
