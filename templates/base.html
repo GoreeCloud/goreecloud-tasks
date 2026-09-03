@@ -1,10 +1,14 @@
 {% load static %}
 <!doctype html>
-<html lang="en" data-glaze-ui="1.3.0" data-glaze-consumer-status="adoption-candidate">
+<html lang="en"
+      data-glaze-ui="2.2.0"
+      data-glaze-release-revision="6731098b28dd0393faa878c70d989a221d714a20"
+      data-glaze-consumer-status="migration-in-progress">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="same-origin">
   <title>{% block title %}GoreeCloud Tasks{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/projects.css' %}">
@@ -14,11 +18,12 @@
   <link rel="stylesheet" href="{% static 'css/notifications.css' %}">
   <link rel="stylesheet" href="{% static 'css/glaze.css' %}">
 </head>
-<body>
-  <header class="topbar">
+<body data-glz-shell="application">
+  <a class="glaze-skip-link" href="#main-content">Skip to main content</a>
+  <header class="topbar" data-glz-surface="system-overlay" data-glz-material="glaze">
     <a class="brand" href="{% url 'tasks:dashboard' %}">GoreeCloud Tasks</a>
     {% if user.is_authenticated %}
-      <div class="account">
+      <div class="account" data-glz-action-group="adaptive">
         <a class="secondary-link" href="{% url 'notifications:settings' %}">Notifications</a>
         <a class="secondary-link" href="{% url 'portability:index' %}">Data</a>
         <span>{{ user.preferred_name }}</span>
@@ -31,14 +36,14 @@
   </header>
 
   {% if messages %}
-    <div class="flash-region" aria-live="polite">
+    <div class="flash-region" aria-live="polite" aria-atomic="false" data-glz-surface="system-overlay">
       {% for message in messages %}
         <div class="notice {{ message.tags|default:'info' }}">{{ message }}</div>
       {% endfor %}
     </div>
   {% endif %}
 
-  <main>
+  <main id="main-content" tabindex="-1">
     {% block content %}{% endblock %}
   </main>
 </body>
