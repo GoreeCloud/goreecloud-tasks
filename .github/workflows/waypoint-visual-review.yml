@@ -1,0 +1,32 @@
+name: Waypoint visual review
+
+on:
+  pull_request:
+    paths:
+      - 'docs/identity/waypoint/**'
+      - 'scripts/validate_waypoint_visual_review.py'
+      - '.github/workflows/waypoint-visual-review.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/identity/waypoint/**'
+      - 'scripts/validate_waypoint_visual_review.py'
+      - '.github/workflows/waypoint-visual-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-review-state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Validate Waypoint visual review round
+        run: python scripts/validate_waypoint_visual_review.py

@@ -61,6 +61,14 @@
       "workflow_name": "Production Readiness Evidence Manifest",
       "required_jobs": ["production-readiness-evidence-manifest"],
       "evidence_scope": "aggregate workflow/job inventory, target-environment evidence status, and production-approval consistency"
+    },
+    {
+      "workflow_path": ".github/workflows/waypoint-visual-review.yml",
+      "workflow_name": "Waypoint visual review",
+      "required_jobs": [
+        "validate-review-state"
+      ],
+      "evidence_scope": "review-only Waypoint visual identity integrity, exact source hashing, accessibility metadata, safe SVG structure, and no canonical, runtime, or public promotion"
     }
   ],
   "target_environment_evidence": [

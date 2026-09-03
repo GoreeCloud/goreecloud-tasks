@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Waypoint Progress Meridian candidate</title>
+  <desc id="desc">Three ascending progress lanes converging on a bright directional destination.</desc>
+  <defs>
+    <linearGradient id="bg" x1="70" y1="70" x2="448" y2="442" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDBA74"/>
+      <stop offset=".5" stop-color="#F97316"/>
+      <stop offset="1" stop-color="#DB2777"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#bg)"/>
+  <path d="M126 364l102-84 74 20 84-120" fill="none" stroke="#FFFFFF" stroke-opacity=".48" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M126 364l102-32 74-76 84-76" fill="none" stroke="#FFFFFF" stroke-opacity=".72" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M126 364l102 16 74-124 84-76" fill="none" stroke="#FFFFFF" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="126" cy="364" r="24" fill="#FFFFFF"/>
+  <circle cx="386" cy="180" r="30" fill="#FFFFFF"/>
+  <path d="M348 147l56 33-56 33" fill="none" stroke="#F97316" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
