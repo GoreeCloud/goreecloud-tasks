@@ -31,6 +31,14 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
+      - name: Check out pinned Calendar busy-time provider candidate
+        uses: actions/checkout@v6
+        with:
+          repository: GoreeCloud/goreecloud-calendar
+          ref: c7e40faa1357cd6befe4c6afc2c564fa06f86724
+          path: calendar-source
+          persist-credentials: false
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -56,6 +64,11 @@ jobs:
 
       - name: Run tests
         run: python manage.py test
+
+      - name: Validate live Calendar busy-time peer contract
+        env:
+          CALENDAR_REPO_DIR: ${{ github.workspace }}/calendar-source
+        run: python tests/validate_calendar_busy_candidate_live.py
 
   ntfy-integration:
     runs-on: ubuntu-24.04
