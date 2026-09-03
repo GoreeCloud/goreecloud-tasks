@@ -114,7 +114,7 @@ def build_snapshots(root: Path) -> None:
 
 def acceptance_page() -> str:
     pages = ",".join(f'"{name}"' for name in SNAPSHOTS)
-    page = """<!doctype html>
+    page = r"""<!doctype html>
 <html lang="en" data-status="pending">
 <head>
 <meta charset="utf-8">
