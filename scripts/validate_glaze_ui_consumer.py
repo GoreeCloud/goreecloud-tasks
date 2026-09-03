@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed source validation for the GoreeCloud Tasks GLAZE UI V1.0 migration."""
+"""Fail-closed source validation for the GoreeCloud Tasks GLAZE UI V1.0 migration under Platform Contract v0.2."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET_VERSION = "1.0.0"
+PLATFORM_REQUIRED_VERSION = "1.1.0"
 GLAZE_SOURCE_REVISION = "70909bbdccad378fb7281ae1842e2f5beed64c38"
 
 
@@ -31,7 +32,7 @@ def main() -> None:
     rendered = read("scripts/validate_glaze_ui_rendered.py")
     workflow = read(".github/workflows/ci.yml")
 
-    # Exact V1 identity and fail-closed downstream lifecycle boundary.
+    # Exact V1 implementation identity and fail-closed downstream lifecycle boundary.
     require(f'data-glaze-ui="{TARGET_VERSION}"' in base, "base template must declare GLAZE UI V1.0")
     require(
         f'data-glaze-source-revision="{GLAZE_SOURCE_REVISION}"' in base,
@@ -59,7 +60,8 @@ def main() -> None:
     require("does not establish production acceptance" in contract_plain, "production-acceptance non-claim is missing")
     require("not a retired Glaze product version" in contract, "rollback must use an exact Tasks revision, not a retired Glaze version")
 
-    # Current controlled records must use V1 as the sole active Glaze identity.
+    # Current controlled records must preserve the implemented V1 identity while
+    # representing the current Platform Contract baseline separately.
     active_records = {
         "base template": base,
         "consumer contract": contract,
@@ -72,11 +74,31 @@ def main() -> None:
         require("Glaze UI 2.2" not in content and "GLAZE UI 2.2" not in content, f"{name} retains retired 2.2 identity")
         require('data-glaze-ui="1.3.0"' not in content, f"{name} retains retired 1.3 active marker")
 
-    require('version: "1.0.0"' in platform, "Platform Contract must record V1 implementation version")
-    require("glaze-ui==1.0.0" in platform, "Platform compatibility must target exact reset version")
+    require(
+        re.search(r"^\s*version:\s*['\"]?1\.0\.0['\"]?\s*$", platform, re.MULTILINE) is not None,
+        "Platform Contract must record the implemented V1 version",
+    )
+    require("schema_version: '0.2'" in platform or 'schema_version: "0.2"' in platform, "Platform Contract must use schema v0.2")
+    require("platform_contract: '0.2'" in platform or 'platform_contract: "0.2"' in platform, "Platform compatibility must use contract v0.2")
+    require(
+        re.search(r"^\s*glaze_ui_required:\s*['\"]?1\.1\.0['\"]?\s*$", platform, re.MULTILINE) is not None,
+        "Platform Contract must record the current central Glaze UI baseline",
+    )
+    require("glaze-ui==1.1.0" in platform, "Platform compatibility must require the current central Glaze UI baseline")
+    require("result: applicable-migration-required" in platform, "Platform Contract must keep the implemented V1 consumer in migration-required state")
     require("status: nonconformant" in platform, "Platform Contract must remain nonconformant")
-    require("upstream V1 production eligibility" in platform, "Platform Contract must preserve upstream production boundary")
-    require("GLAZE UI V1.0 (`1.0.0`) is the official and only current" in conformance, "platform conformance record is not reset to V1")
+    require(
+        "Migration and exact-head application acceptance against the current Platform Contract Glaze UI baseline remain incomplete." in platform,
+        "Platform Contract must preserve the current migration and application-acceptance boundary",
+    )
+    require(
+        "GoreeCloud Tasks currently implements the repository-local GLAZE UI V1.0 (`1.0.0`) migration baseline." in conformance,
+        "platform conformance record must distinguish implemented V1 from the current required baseline",
+    )
+    require(
+        f"current GoreeCloud Platform Contract v0.2 consumer requirement is Glaze UI `{PLATFORM_REQUIRED_VERSION}`" in conformance,
+        "platform conformance record must identify the current required Glaze UI baseline",
+    )
 
     # The compatibility layer remains local and last so product CSS cannot silently override it.
     css_links = re.findall(r"static 'css/([^']+)'", base)
@@ -192,8 +214,9 @@ def main() -> None:
 
     print(
         "GoreeCloud Tasks GLAZE UI V1.0 source contract validated: "
-        f"target {TARGET_VERSION}, source {GLAZE_SOURCE_REVISION}, migration in progress; "
-        "rendered, upstream production, application acceptance, release, and production gates remain separate"
+        f"implemented {TARGET_VERSION}, current Platform Contract requirement {PLATFORM_REQUIRED_VERSION}, "
+        f"source {GLAZE_SOURCE_REVISION}, migration in progress; rendered, application acceptance, "
+        "release, and production gates remain separate"
     )
 
 
