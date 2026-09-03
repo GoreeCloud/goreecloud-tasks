@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render real GoreeCloud Tasks templates and validate Glaze UI adoption in Chromium."""
+"""Render real GoreeCloud Tasks templates and validate Glaze UI 2.2 adoption in Chromium."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+TARGET_VERSION = "2.2.0"
+GLAZE_RELEASE_REVISION = "6731098b28dd0393faa878c70d989a221d714a20"
 RENDER_ATTEMPTS = 2
 RENDER_TIMEOUT_SECONDS = 45
 SNAPSHOTS = ("dashboard", "task-detail", "notifications", "data", "login")
@@ -93,7 +95,12 @@ def build_snapshots(root: Path) -> None:
         response = (anonymous if name == "login" else authenticated).get(routes[name], HTTP_HOST="testserver")
         require(response.status_code == 200, f"{name} fixture returned HTTP {response.status_code}")
         html = response.content.decode("utf-8")
-        require('data-glaze-ui="1.3.0"' in html, f"{name} lost Glaze version marker")
+        require(f'data-glaze-ui="{TARGET_VERSION}"' in html, f"{name} lost Glaze version marker")
+        require(
+            f'data-glaze-release-revision="{GLAZE_RELEASE_REVISION}"' in html,
+            f"{name} lost canonical Glaze release provenance",
+        )
+        require('data-glaze-consumer-status="migration-in-progress"' in html, f"{name} overclaimed Glaze consumer status")
         require("css/glaze.css" in html, f"{name} did not load glaze.css")
         (root / f"{name}.html").write_text(html, encoding="utf-8")
 
@@ -109,7 +116,7 @@ def acceptance_page() -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tasks Glaze UI rendered acceptance</title>
+<title>Tasks Glaze UI 2.2 rendered acceptance</title>
 <style>
 html,body{{margin:0;padding:0;background:#fff;color:#000;font:14px system-ui,sans-serif}}
 iframe{{display:block;width:100vw;height:1000px;border:0}}
@@ -138,6 +145,19 @@ function visible(element){{
   return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
 }}
 
+function applyMode(root){{
+  if(mode==='touch-assistance'){{
+    root.dataset.glzInput='touch';
+    root.dataset.glzTouchAssistance='true';
+  }} else if(mode==='text-200'){{
+    root.dataset.glzTextScale='200';
+  }} else if(mode==='reduced-transparency'){{
+    root.dataset.glzTransparency='reduced';
+  }} else if(mode==='increased-contrast'){{
+    root.dataset.mode='increased-contrast';
+  }}
+}}
+
 function inspect(frame,name){{
   const doc=frame.contentDocument;
   const win=frame.contentWindow;
@@ -145,13 +165,17 @@ function inspect(frame,name){{
   if(!doc) return;
 
   const root=doc.documentElement;
+  applyMode(root);
   const rootStyle=win.getComputedStyle(root);
-  note(root.dataset.glazeUi==='1.3.0',`${{name}} lost data-glaze-ui=1.3.0`);
-  note(root.dataset.glazeConsumerStatus==='adoption-candidate',`${{name}} lost Adoption Candidate marker`);
+  note(root.dataset.glazeUi==='2.2.0',`${{name}} lost data-glaze-ui=2.2.0`);
+  note(root.dataset.glazeReleaseRevision==='{GLAZE_RELEASE_REVISION}',`${{name}} lost canonical Stable release provenance`);
+  note(root.dataset.glazeConsumerStatus==='migration-in-progress',`${{name}} overclaimed downstream acceptance`);
 
   const sheets=[...doc.querySelectorAll('link[rel=stylesheet]')].map(link=>link.getAttribute('href')||'');
   note(sheets.length>0&&sheets[sheets.length-1].includes('css/glaze.css'),`${{name}} does not load glaze.css last`);
-  note(rootStyle.getPropertyValue('--glaze-target-min').trim()==='44px',`${{name}} lost 44px target token`);
+  note(rootStyle.getPropertyValue('--glaze-version').trim().replaceAll('"','')==='2.2.0',`${{name}} lost 2.2 source token`);
+  note(rootStyle.getPropertyValue('--glaze-target-min').trim()==='48px',`${{name}} lost 48px target token`);
+  note(rootStyle.getPropertyValue('--glaze-target-assisted').trim()==='56px',`${{name}} lost 56px assisted target token`);
 
   if(mode==='forced-colors'){{
     note(rootStyle.getPropertyValue('--glaze-canvas').trim().toLowerCase()==='canvas',`${{name}} did not activate forced-colors Canvas semantics`);
@@ -161,6 +185,18 @@ function inspect(frame,name){{
     note(rootStyle.getPropertyValue('--glaze-canvas').trim().toLowerCase()===expectedCanvas,`${{name}} did not activate ${{expectedTheme}} Glaze tokens`);
   }}
 
+  if(mode==='touch-assistance'){{
+    note(root.dataset.glzInput==='touch',`${{name}} did not enter explicit touch input mode`);
+    note(root.dataset.glzTouchAssistance==='true',`${{name}} did not enter Touch Assistance mode`);
+  }}
+  if(mode==='text-200'){{
+    note(root.dataset.glzTextScale==='200',`${{name}} did not enter explicit 200% text mode`);
+    note(parseFloat(rootStyle.fontSize)>=31.5,`${{name}} 200% text scale did not reach 32px-equivalent root text`);
+  }}
+  if(mode==='increased-contrast'){{
+    note(rootStyle.getPropertyValue('--glaze-focus-width').trim()==='4px',`${{name}} increased contrast did not strengthen focus geometry`);
+  }}
+
   note(doc.documentElement.scrollWidth<=frame.clientWidth+1,`${{name}} horizontally overflows ${{frame.clientWidth}}px viewport: ${{doc.documentElement.scrollWidth}}px`);
 
   const controls=[...doc.querySelectorAll('button,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea,a.nav-item,a.secondary-link,a.button')].filter(visible);
@@ -168,20 +204,32 @@ function inspect(frame,name){{
   for(const control of controls){{
     const rect=control.getBoundingClientRect();
     if(control.matches('textarea')) continue;
-    note(rect.height>=43.5,`${{name}} control below 44px: ${{control.tagName}}.${{control.className}} = ${{rect.height.toFixed(1)}}px`);
+    const minimum=mode==='touch-assistance'?55.5:47.5;
+    note(rect.height>=minimum,`${{name}} control below ${{mode==='touch-assistance'?'56':'48'}}px: ${{control.tagName}}.${{control.className}} = ${{rect.height.toFixed(1)}}px`);
   }}
 
   const completion=doc.querySelector('.complete-button');
   if(completion&&visible(completion)){{
     const rect=completion.getBoundingClientRect();
-    note(rect.width>=43.5&&rect.height>=43.5,`${{name}} completion target is ${{rect.width.toFixed(1)}}x${{rect.height.toFixed(1)}}`);
+    const minimum=mode==='touch-assistance'?55.5:47.5;
+    note(rect.width>=minimum&&rect.height>=minimum,`${{name}} completion target is ${{rect.width.toFixed(1)}}x${{rect.height.toFixed(1)}}`);
   }}
   const nav=doc.querySelector('.nav-item');
-  if(nav&&visible(nav)) note(nav.getBoundingClientRect().height>=43.5,`${{name}} navigation target is below 44px`);
+  if(nav&&visible(nav)){{
+    const minimum=mode==='touch-assistance'?55.5:47.5;
+    note(nav.getBoundingClientRect().height>=minimum,`${{name}} navigation target is below 2.2 floor`);
+  }}
 
   if(mode==='reduced-motion'){{
     const motionTarget=controls[0]||doc.body;
     note(durationMs(win.getComputedStyle(motionTarget).transitionDuration)<=0.1,`${{name}} reduced-motion transition remains active`);
+  }}
+  if(mode==='reduced-transparency'){{
+    for(const surface of doc.querySelectorAll('.topbar,.sidebar')){{
+      if(!visible(surface)) continue;
+      const style=win.getComputedStyle(surface);
+      note(style.backdropFilter==='none'||style.webkitBackdropFilter==='none',`${{name}} reduced transparency left backdrop filtering active`);
+    }}
   }}
 }}
 
@@ -305,7 +353,11 @@ def main() -> None:
                     run_case(browser, port, width=width, height=height, theme=theme)
             run_case(browser, port, width=390, height=844, theme="light", mode="reduced-motion")
             run_case(browser, port, width=390, height=844, theme="light", mode="forced-colors")
-    print("GoreeCloud Tasks representative Glaze UI rendered acceptance passed")
+            run_case(browser, port, width=390, height=844, theme="light", mode="touch-assistance")
+            run_case(browser, port, width=390, height=844, theme="light", mode="text-200")
+            run_case(browser, port, width=390, height=844, theme="light", mode="reduced-transparency")
+            run_case(browser, port, width=390, height=844, theme="light", mode="increased-contrast")
+    print("GoreeCloud Tasks representative Glaze UI 2.2 rendered acceptance passed")
 
 
 if __name__ == "__main__":
