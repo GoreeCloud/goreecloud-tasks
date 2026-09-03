@@ -26,6 +26,7 @@ def main() -> None:
     base = read("templates/base.html")
     glaze = read("static/css/glaze.css")
     contract = read("docs/glaze-ui.md")
+    contract_plain = contract.replace("**", "")
     rendered = read("scripts/validate_glaze_ui_rendered.py")
     workflow = read(".github/workflows/ci.yml")
 
@@ -48,7 +49,7 @@ def main() -> None:
     require("Glaze UI 2.2.0 Stable" in contract, "consumer contract target version is missing")
     require(GLAZE_RELEASE_REVISION in contract, "consumer contract must record the canonical Stable release revision")
     require("Migration in progress" in contract, "consumer contract must retain the downstream migration boundary")
-    require("does **not** establish production acceptance" in contract, "production-acceptance non-claim is missing")
+    require("does not establish production acceptance" in contract_plain, "production-acceptance non-claim is missing")
     require("2.1.0" in contract, "2.2 rollback baseline must remain documented")
 
     # The compatibility layer remains local and last so product CSS cannot silently override the contract.
