@@ -52,9 +52,9 @@
     },
     {
       "workflow_path": ".github/workflows/platform-contract.yml",
-      "workflow_name": "Platform contract",
+      "workflow_name": "Platform Contract",
       "required_jobs": ["validate"],
-      "evidence_scope": "exact-revision machine-readable GoreeCloud platform declaration validation, computed nonconformance reporting, missing-evidence visibility, and fail-closed Stable eligibility semantics"
+      "evidence_scope": "exact-revision canonical GoreeCloud Platform Contract v0.1 manifest validation with explicit lifecycle, platform-system integration, continuity, compatibility, and conformance blockers"
     },
     {
       "workflow_path": ".github/workflows/production-readiness-evidence-manifest.yml",
