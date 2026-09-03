@@ -115,7 +115,9 @@ Provider schema:
 
 Schema version: `1`
 
-The Tasks client is implemented in `api/calendar_busy_client.py`. It accepts only a bounded requested time window and a deployment-provided peer-service credential. It does not send or store a Calendar subject, username, calendar href, or collection selector. Calendar owns the subject and collection authorization mapping on the provider side.
+The Tasks client is implemented in `api/calendar_busy_client.py`. It sends only a bounded requested time window plus the deployment-provided peer-service credential. It sends no Calendar subject, username, calendar href, or collection selector. Calendar independently owns the credential-to-Calendar-subject and collection authorization mapping.
+
+Because GoreeCloud Tasks is multi-user, the consumer configuration separately binds that peer credential's returned context to exactly one local Tasks username. This local recipient binding is not sent to Calendar and cannot select Calendar scope. It prevents a single-principal development credential from accidentally becoming a shared availability feed for every Tasks user. A future GoreeCloud Identity delegated-user model should replace the duplicated provider/consumer principal mapping rather than weakening either side.
 
 ### 4.1 Data minimization
 
@@ -147,22 +149,25 @@ The Tasks client:
 - emits low-detail errors for upstream HTTP and transport failure;
 - performs no automatic retry in this first interactive read-only client.
 
-A Calendar outage must degrade Tasks planning context safely. It must not permit fabrication of Calendar event state, conversion of busy intervals into authoritative Tasks records, or direct CalDAV access.
+A Calendar outage must degrade Tasks planning context safely. It must not permit fabrication of Calendar event state, conversion of busy intervals into authoritative Tasks records, direct CalDAV access, or authorization broadening.
 
-### 4.3 Tasks-side configuration
+### 4.3 Tasks-side configuration and local recipient authorization
 
 The outgoing client is disabled by default and uses:
 
 - `TASKS_CALENDAR_BUSY_ENABLED`;
+- `TASKS_CALENDAR_BUSY_USERNAME`;
 - `TASKS_CALENDAR_BUSY_BASE_URL`;
 - `TASKS_CALENDAR_BUSY_TOKEN` or `TASKS_CALENDAR_BUSY_TOKEN_FILE`;
 - `TASKS_CALENDAR_BUSY_TIMEOUT_SECONDS`.
 
-The two token sources are mutually exclusive. File-backed token configuration rejects non-regular files and files granting group or other permissions. Enabled configuration fails closed when the URL, token, or timeout is invalid.
+`TASKS_CALENDAR_BUSY_USERNAME` identifies the one local Tasks account permitted to receive busy context associated with this configured peer credential. `CalendarBusyClientConfiguration.allows_user()` requires an enabled, error-free configuration plus an authenticated active Tasks user whose username exactly matches that binding. It fails closed for another username, an inactive user, an unauthenticated user, or invalid configuration.
 
-There is deliberately no Tasks-side Calendar subject or calendar-collection configuration. Those authorization decisions remain provider-side and cannot be widened by the consumer request.
+The two token sources are mutually exclusive. File-backed token configuration rejects non-regular files and files granting group or other permissions. Enabled configuration fails closed when the local username, URL, token, or timeout is invalid.
 
-This credential model remains a transitional development mechanism and is not production GoreeCloud Identity acceptance.
+There remains deliberately no Tasks-side Calendar subject or calendar-collection selector. Calendar authorization decisions remain provider-side and cannot be widened by the consumer request. The local Tasks username is a recipient boundary, not a Calendar identity assertion.
+
+This paired single-principal model remains a transitional development mechanism and is not production GoreeCloud Identity acceptance.
 
 ## 5. Attribution, conflict, and deletion semantics
 
@@ -183,12 +188,12 @@ Calendar busy intervals are advisory planning context only. They are not Tasks r
 This source tranche does not change the current platform-acceptance status of the application:
 
 - **GoreeCloud Manager:** existing read-only Manager integration and validation remain unchanged.
-- **Privacy Shield:** Calendar busy data is structurally minimized to merged intervals; production Privacy Shield acceptance remains pending.
-- **Wardveil Security:** HTTPS requirements, protected secret-file handling, bounded inputs/responses, low-detail failures, and provider-side fixed authorization scope are represented in source; production security acceptance remains pending.
+- **Privacy Shield:** Calendar busy data is structurally minimized to merged intervals and the local recipient binding prevents cross-user reuse of one configured context; production Privacy Shield acceptance remains pending.
+- **Wardveil Security:** HTTPS requirements, protected secret-file handling, bounded inputs/responses, low-detail failures, local recipient gating, and provider-side fixed authorization scope are represented in source; production security acceptance remains pending.
 - **Everkeep:** no Tasks or Calendar persistent schema is changed by the busy-time client; rollback is source-only. Production continuity acceptance remains pending.
 - **Glaze UI:** no user-facing interface change is introduced in this client tranche; current mandatory Glaze UI acceptance remains a separate gate.
 - **GoreeCloud Mesh:** no Mesh transport, discovery, or event behavior is introduced; the candidate remains an explicit versioned HTTP contract.
-- **GoreeCloud Identity:** the development bearer mapping is transitional and does not establish production service-identity/delegation conformance.
+- **GoreeCloud Identity:** the paired local/provider configured principal bindings and bearer transport are transitional and do not establish production service-identity/delegation conformance.
 
 ## 7. Explicitly not implemented in this tranche
 
@@ -241,8 +246,9 @@ The outgoing Calendar busy-time consumer adds contract coverage for:
 - bearer-header construction without URL credentials;
 - malformed, oversized, HTTP-error, and transport-error fail-closed behavior;
 - disabled/invalid client configuration;
+- exact local Tasks recipient gating;
 - mutually exclusive token sources;
 - protected file-secret permission checks; and
-- absence of Tasks-side Calendar subject/collection selectors.
+- absence of Tasks-controlled Calendar subject/collection selectors.
 
-Before Calendar busy context may be described as integrated into the Tasks product, the exact consumer candidate must pass Tasks CI and a disposable live cross-application wire test against the exact Calendar provider candidate. UI consumption, production authorization, representative deployment, and application acceptance remain separate gates.
+Before Calendar busy context may be described as integrated into the Tasks product, the exact consumer candidate must pass Tasks CI and a disposable live cross-application wire test against the exact Calendar provider candidate. UI consumption must additionally enforce the local Tasks recipient binding. Production authorization, representative deployment, and application acceptance remain separate gates.
