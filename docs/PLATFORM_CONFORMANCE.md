@@ -16,20 +16,20 @@ Current GoreeCloud platform conformance evaluates all seven Integral Platform Sy
 6. GoreeCloud Mesh
 7. GoreeCloud Identity
 
-Every system must be evaluated under the canonical repository-root `goreecloud.platform.yaml` declaration. An integration may be recorded as `implemented`, `partial`, `planned`, `not-applicable`, or `unknown` only when repository evidence supports that state. `not-applicable` requires a substantive explanation and must be reevaluated when the application role changes.
+Every system must be evaluated under the canonical repository-root `goreecloud.platform.yaml` declaration. Platform Contract v0.2 uses the governed result vocabulary `applicable-conformant`, `applicable-migration-required`, `applicable-blocked`, `applicable-nonconformant`, and `not-applicable-justified`. A positive or non-applicable result requires the evidence and justification required by the central contract; missing implementation must not be hidden behind a not-applicable classification.
 
-Repository-local management, privacy, security, continuity, interface, coordination, or identity behavior does not by itself establish acceptance by the corresponding Integral Platform System. Branding, prose, a badge, an implementation marker, or intended future integration cannot substitute for producer-system contracts and acceptance evidence.
+Repository-local management, privacy, security, continuity, interface, coordination, or identity behavior does not by itself establish acceptance by the corresponding Integral Platform System. Branding, prose, a badge, source implementation, or intended future integration cannot substitute for producer-system contracts and acceptance evidence.
 
 ## Current Glaze UI gating
 
-GLAZE UI V1.0 (`1.0.0`) is the official and only current GoreeCloud design-system target. The canonical V1 source is an official reset baseline whose production acceptance remains pending. No pre-reset Glaze implementation or acceptance is automatically V1 evidence, and no downstream application is upgraded by declaration.
+GoreeCloud Tasks currently implements the repository-local GLAZE UI V1.0 (`1.0.0`) migration baseline. The current GoreeCloud Platform Contract v0.2 consumer requirement is Glaze UI `1.1.0`. The existing 1.0.0 implementation therefore remains `applicable-migration-required`; its source mapping and rendered validation are useful migration evidence but do not establish current Glaze UI conformance.
 
-This Tasks candidate contains a repository-local V1 source mapping and automated rendered validator, but the consumer remains migration-in-progress and nonconformant until exact-head and application-level evidence is complete and the applicable upstream production-eligibility boundary permits promotion.
+This Tasks candidate remains migration-in-progress and nonconformant until the application is migrated to the current required baseline and the exact-head, application-level, accessibility, release, and applicable production-eligibility gates are satisfied.
 
-No release or service state may be classified or retained as Stable unless native application qualification and all applicable current Integral Platform System requirements are complete, validated, and accepted. Missing, materially incomplete, outdated, unknown, unverified, or reset-invalidated required integration remains a Stable blocker.
+No release or service state may be classified or retained as Stable unless native application qualification and all applicable current Integral Platform System requirements are complete, validated, and accepted. Missing, materially incomplete, outdated, blocked, migration-required, nonconformant, or unverified required integration remains a Stable blocker.
 
 ## Evidence and production boundary
 
-Source conformance, exact-revision CI, target-environment acceptance, production deployment, backup/restore evidence, release authorization, and Stable qualification are separate gates. Passing Platform Contract validation proves that the declaration is structurally valid and internally governed; it does not manufacture missing runtime evidence or production approval.
+Source conformance, exact-revision CI, target-environment acceptance, production deployment, backup/restore evidence, release authorization, and Stable qualification are separate gates. Passing Platform Contract validation proves that the declaration is structurally valid and produces a bounded computed conformance result; it does not manufacture missing runtime evidence or production approval.
 
 Repository CI, release documentation, project specifications, and change logs must progressively enforce and record this contract. Where repository source, canonical GoreeCloud governance, and historical records differ, current canonical governance controls current behavior while immutable revision history remains audit evidence.
