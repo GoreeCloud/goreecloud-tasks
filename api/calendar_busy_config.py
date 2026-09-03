@@ -14,13 +14,33 @@ _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 @dataclass(frozen=True, slots=True)
 class CalendarBusyClientConfiguration:
-    """Validated Tasks-side configuration for privacy-minimized Calendar context."""
+    """Validated Tasks-side configuration for privacy-minimized Calendar context.
+
+    ``username`` is the one local Tasks principal allowed to receive context obtained with
+    this peer credential. It is not a Calendar subject selector: Calendar independently maps
+    the credential to its own subject and collection scope. The duplicate local binding is a
+    transitional fail-closed privacy guard until GoreeCloud Identity can carry delegated user
+    context across both applications.
+    """
 
     enabled: bool
+    username: str = ""
     base_url: str = ""
     token: str = ""
     timeout_seconds: int = 5
     error: str | None = None
+
+    def allows_user(self, user) -> bool:
+        """Return whether one authenticated active Tasks user may consume this context."""
+
+        return bool(
+            self.enabled
+            and not self.error
+            and user
+            and getattr(user, "is_authenticated", False)
+            and getattr(user, "is_active", False)
+            and getattr(user, "username", "") == self.username
+        )
 
 
 def _enabled(value: str | None) -> bool:
@@ -59,9 +79,10 @@ def load_calendar_busy_client_configuration(
 ) -> CalendarBusyClientConfiguration:
     """Load the optional outgoing Calendar busy-time client configuration.
 
-    The Calendar provider, not this client, owns the subject and collection authorization
-    mapping. Tasks therefore stores no Calendar subject or collection selector in this
-    configuration and cannot widen the peer-service scope through request data.
+    Calendar owns its subject/collection authorization mapping. Tasks owns the local recipient
+    boundary: one configured active authenticated Tasks username may consume the context. The
+    request still carries no Calendar subject or collection selector and cannot widen Calendar
+    scope through caller-controlled data.
     """
 
     env = os.environ if environment is None else environment
@@ -70,6 +91,12 @@ def load_calendar_busy_client_configuration(
         return CalendarBusyClientConfiguration(enabled=False)
 
     errors: list[str] = []
+    username = env.get("TASKS_CALENDAR_BUSY_USERNAME", "").strip()
+    if not username or len(username) > 150:
+        errors.append(
+            "TASKS_CALENDAR_BUSY_USERNAME must identify one local Tasks account"
+        )
+
     base_url = env.get("TASKS_CALENDAR_BUSY_BASE_URL", "").strip().rstrip("/")
     if not base_url or not _valid_base_url(base_url):
         errors.append(
@@ -103,6 +130,7 @@ def load_calendar_busy_client_configuration(
 
     return CalendarBusyClientConfiguration(
         enabled=True,
+        username=username,
         base_url=base_url,
         token=token,
         timeout_seconds=timeout_seconds,
