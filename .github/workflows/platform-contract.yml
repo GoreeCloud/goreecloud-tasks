@@ -1,0 +1,31 @@
+name: Platform Contract
+
+on:
+  pull_request:
+    paths:
+      - goreecloud.platform.yaml
+      - .github/workflows/platform-contract.yml
+      - scripts/tasks_production_readiness_manifest.json
+      - docs/PLATFORM_CONFORMANCE.md
+  push:
+    branches:
+      - main
+    paths:
+      - goreecloud.platform.yaml
+      - .github/workflows/platform-contract.yml
+      - scripts/tasks_production_readiness_manifest.json
+      - docs/PLATFORM_CONFORMANCE.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-contract-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@212660408be80a08698663846ed095aaf8134860
+    with:
+      manifest-path: goreecloud.platform.yaml
