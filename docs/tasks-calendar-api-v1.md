@@ -4,13 +4,13 @@
 
 **Development Candidate / source implementation. Not production accepted.**
 
-This document records the first versioned GoreeCloud Tasks API surface intended for first-party GoreeCloud Calendar integration. It describes the source behavior on the current development branch; it does not establish deployed runtime acceptance, Stable application conformance, GoreeCloud Identity production service identity, Privacy Shield runtime acceptance, Wardveil Security production coverage, or Everkeep production continuity acceptance.
+This document records the current versioned first-party GoreeCloud Tasks ↔ GoreeCloud Calendar integration candidate. It covers the Tasks-owned projection/create/reschedule API plus the Tasks-side strict consumer for privacy-minimized Calendar busy-time context. It does not establish deployed runtime acceptance, Stable application conformance, GoreeCloud Identity production service identity/delegation, Privacy Shield runtime acceptance, Wardveil Security production coverage, Everkeep production continuity acceptance, GoreeCloud Mesh integration acceptance, or production deployment.
 
-GoreeCloud Tasks remains authoritative for task content, workflow, assignment, project membership, completion, recurrence, and task authorization. GoreeCloud Calendar remains authoritative for native calendar events, calendar membership, event scheduling semantics, and Calendar-specific metadata. Neither application may read or mutate the other's database directly.
+GoreeCloud Tasks remains authoritative for task content, workflow, assignment, project membership, completion, recurrence, due scheduling, and task authorization. GoreeCloud Calendar remains authoritative for native calendar events, calendar membership, event authorization, event scheduling semantics, Calendar-specific metadata, and busy-time derivation. Neither application may read or mutate the other's database directly.
 
-## Authentication boundary
+## 1. Tasks provider authentication boundary
 
-The current v1 development transport preserves the existing Tasks Calendar integration configuration:
+The current v1 Tasks provider transport uses:
 
 - `TASKS_CALENDAR_API_ENABLED`
 - `TASKS_CALENDAR_API_USERNAME`
@@ -23,7 +23,7 @@ This is an intentionally bounded development/service integration mechanism. It i
 
 The two service-to-service POST routes are CSRF-exempt because they do not use browser session authentication. They require the dedicated bearer credential, accept JSON only, reject unsupported fields, enforce a 16 KiB request limit, and return private, non-cacheable responses. Browser-facing Tasks mutations remain subject to their ordinary browser security model.
 
-## Projection schema
+## 2. Tasks projection schema
 
 The projection schema identifier remains:
 
@@ -47,11 +47,11 @@ Each task projection contains only the Calendar-required task subset:
 
 Descriptions, comments, labels, assignees, account data, reminder state, operational notes, blockers, related records, and other content are intentionally excluded from the Calendar projection.
 
-## Routes
+## 3. Tasks provider routes used by Calendar
 
-All routes are under the existing `/api/v1/` application API namespace.
+All provider routes are under the Tasks `/api/v1/` namespace.
 
-### List scheduled task projections
+### 3.1 List scheduled task projections
 
 `GET /api/v1/calendar/task-projections/`
 
@@ -62,27 +62,27 @@ Optional bounded window:
 Rules:
 
 - `start` and `end` must be supplied together.
-- Both must be timezone-aware ISO 8601 timestamps.
+- Both must be timezone-aware ISO-8601 timestamps.
 - `end` must be later than `start`.
 - The requested interval may not exceed 93 days.
 - The window uses `due_at >= start` and `due_at < end` semantics.
 - Omitting both parameters preserves the existing compatibility behavior and returns visible active scheduled tasks up to the configured maximum.
 - Completed and cancelled tasks are excluded.
 
-### Read one task projection
+### 3.2 Read one task projection
 
 `GET /api/v1/calendar/task-projections/<task_id>/`
 
 The task must still be visible to the configured Tasks principal, active, and scheduled. Loss of authorization is reflected immediately and returns a non-enumerating `404` response.
 
-### Create a task from Calendar context
+### 3.3 Create a task from Calendar context
 
 `POST /api/v1/calendar/tasks/`
 
 Accepted JSON fields:
 
 - `title` — required;
-- `due_at` — required, timezone-aware ISO 8601;
+- `due_at` — required, timezone-aware ISO-8601;
 - `priority` — optional GoreeCloud P0–P4 integer value, default P3;
 - `project_id` — optional editable Tasks project ID, or `null` for personal Inbox scope.
 
@@ -90,53 +90,130 @@ The created task is a native Tasks record with the configured Tasks principal as
 
 Project creation scope is checked at mutation time. A Viewer cannot create work in a shared project. A project owner or active Manager/Member may create work where the existing Tasks model allows it.
 
-### Reschedule a task
+### 3.4 Reschedule a task
 
 `POST /api/v1/calendar/tasks/<task_id>/reschedule/`
 
 Accepted JSON fields:
 
-- `due_at` — required, timezone-aware ISO 8601;
+- `due_at` — required, timezone-aware ISO-8601;
 - `expected_updated_at` — required optimistic source revision.
 
 The task must be currently editable by the configured Tasks principal. The mutation locks the task row and compares the supplied revision with the authoritative Tasks `updated_at` value. A stale revision returns HTTP `409` with the current revision and does not overwrite the newer Tasks state.
 
 Calendar cannot use this endpoint to complete, delete, assign, relabel, change recurrence, edit descriptions, or otherwise broaden its mutation authority.
 
-## Attribution and minimization
+## 4. Calendar busy-time context consumed by Tasks
+
+The next planning increment introduces a strict Tasks-side consumer for the Calendar provider candidate in GoreeCloud Calendar PR #17. The Calendar provider contract is conceptually bound to:
+
+`GET /api/v1/tasks/busy-time?starts_at=<ISO-8601>&ends_at=<ISO-8601>`
+
+Provider schema:
+
+`goreecloud.calendar.tasks-busy.v1`
+
+Schema version: `1`
+
+The Tasks client is implemented in `api/calendar_busy_client.py`. It accepts only a bounded requested time window and a deployment-provided peer-service credential. It does not send or store a Calendar subject, username, calendar href, or collection selector. Calendar owns the subject and collection authorization mapping on the provider side.
+
+### 4.1 Data minimization
+
+The Tasks client accepts exactly the v1 response field set:
+
+- `schema`;
+- `version`;
+- `generated_at`;
+- `range` containing only `starts_at` and `ends_at`;
+- `returned`;
+- `busy`, containing only merged interval `starts_at` and `ends_at` values.
+
+The strict v1 parser rejects unexpected root, range, or interval fields. This prevents event titles, descriptions, locations, UIDs, Calendar subjects, collection identifiers, attendee data, or other Calendar metadata from silently becoming trusted Tasks planning data. A broader response requires an explicit contract revision rather than an undocumented additive field.
+
+Busy intervals must be timezone-aware, positive-duration, inside the response range, strictly chronological, non-overlapping, and fully merged. The returned count must exactly match the interval array. When the client performs the HTTP request, the response range must exactly match the requested range.
+
+### 4.2 Window and transport bounds
+
+The Tasks client:
+
+- permits a maximum 31-day request window;
+- limits the response body to 512 KiB;
+- uses an explicit timeout between greater than zero and 30 seconds;
+- sends the credential only in the `Authorization: Bearer` header;
+- sends no credential in the URL;
+- requires HTTPS for non-loopback Calendar endpoints;
+- permits plain HTTP only for `localhost`, `127.0.0.1`, or `::1` disposable validation;
+- rejects credential-bearing, query-bearing, or fragment-bearing base URLs;
+- emits low-detail errors for upstream HTTP and transport failure;
+- performs no automatic retry in this first interactive read-only client.
+
+A Calendar outage must degrade Tasks planning context safely. It must not permit fabrication of Calendar event state, conversion of busy intervals into authoritative Tasks records, or direct CalDAV access.
+
+### 4.3 Tasks-side configuration
+
+The outgoing client is disabled by default and uses:
+
+- `TASKS_CALENDAR_BUSY_ENABLED`;
+- `TASKS_CALENDAR_BUSY_BASE_URL`;
+- `TASKS_CALENDAR_BUSY_TOKEN` or `TASKS_CALENDAR_BUSY_TOKEN_FILE`;
+- `TASKS_CALENDAR_BUSY_TIMEOUT_SECONDS`.
+
+The two token sources are mutually exclusive. File-backed token configuration rejects non-regular files and files granting group or other permissions. Enabled configuration fails closed when the URL, token, or timeout is invalid.
+
+There is deliberately no Tasks-side Calendar subject or calendar-collection configuration. Those authorization decisions remain provider-side and cannot be widened by the consumer request.
+
+This credential model remains a transitional development mechanism and is not production GoreeCloud Identity acceptance.
+
+## 5. Attribution, conflict, and deletion semantics
 
 Calendar-origin task creation and rescheduling are recorded through the existing Tasks material activity system. Activity metadata records the source (`goreecloud-calendar`) and the names of the affected fields, not copies of task descriptions, comments, labels, blocker text, or other private content.
 
-The API performs no general-purpose usage analytics and does not create a parallel Calendar copy of task content. The projection is derived from the current authoritative Tasks record on each request.
-
-## Conflict and deletion semantics
+The Tasks API performs no general-purpose usage analytics and does not create a parallel Calendar copy of task content. Task projections are derived from the current authoritative Tasks record on each request.
 
 The v1 mutation surface uses Tasks `updated_at` as the first optimistic revision guard. This prevents a stale Calendar planning surface from silently overwriting a more recent Tasks reschedule.
 
-No Calendar endpoint in this version deletes a task. Removing or hiding a projection in Calendar must not be interpreted as task deletion. Task completion and deletion remain Tasks-authoritative operations and will naturally remove the item from the active scheduled projection feed.
+No Calendar endpoint in this version deletes a task. Removing or hiding a projection in Calendar must not be interpreted as task deletion. Task completion and deletion remain Tasks-authoritative operations and naturally remove the item from the active scheduled projection feed.
 
 Recurrence remains Tasks-authoritative. Calendar receives recurrence state for display but cannot rewrite recurrence through this API version.
 
-## Explicitly not implemented in this tranche
+Calendar busy intervals are advisory planning context only. They are not Tasks records, do not gain task lifecycle state, and are not exported as task content.
 
+## 6. Integral Platform System boundary
+
+This source tranche does not change the current platform-acceptance status of the application:
+
+- **GoreeCloud Manager:** existing read-only Manager integration and validation remain unchanged.
+- **Privacy Shield:** Calendar busy data is structurally minimized to merged intervals; production Privacy Shield acceptance remains pending.
+- **Wardveil Security:** HTTPS requirements, protected secret-file handling, bounded inputs/responses, low-detail failures, and provider-side fixed authorization scope are represented in source; production security acceptance remains pending.
+- **Everkeep:** no Tasks or Calendar persistent schema is changed by the busy-time client; rollback is source-only. Production continuity acceptance remains pending.
+- **Glaze UI:** no user-facing interface change is introduced in this client tranche; current mandatory Glaze UI acceptance remains a separate gate.
+- **GoreeCloud Mesh:** no Mesh transport, discovery, or event behavior is introduced; the candidate remains an explicit versioned HTTP contract.
+- **GoreeCloud Identity:** the development bearer mapping is transitional and does not establish production service-identity/delegation conformance.
+
+## 7. Explicitly not implemented in this tranche
+
+- Tasks Agenda/UI presentation of Calendar busy intervals;
+- combined task-and-busy planning suggestions;
 - task duration or time-block length;
 - drag-and-drop duration-aware time blocking;
-- Calendar busy/event context flowing into Tasks;
 - task completion from Calendar;
 - task deletion from Calendar;
 - recurrence mutation from Calendar;
 - arbitrary task editing from Calendar;
-- multi-user delegated service identity through GoreeCloud Identity;
-- production Wardveil security acceptance for this consumer path;
+- production multi-user delegated service identity through GoreeCloud Identity;
+- production network/TLS/reverse-proxy activation of the Calendar peer endpoint;
+- production rate-limiter integration for the peer endpoint;
+- production Wardveil Security acceptance for this consumer path;
 - production Privacy Shield adapter acceptance for this consumer path;
 - production Everkeep continuity acceptance for this consumer path;
-- deployed first-party Calendar consumer acceptance.
+- GoreeCloud Mesh integration acceptance;
+- deployment or Stable qualification.
 
 A due time is not treated as a duration. A true time-block planner remains gated on an explicit Tasks duration/scheduling model.
 
-## Validation requirements
+## 8. Validation requirements
 
-Before this source candidate can advance, the exact revision must pass the repository's existing CI and integration gates plus Calendar-specific tests covering at least:
+The Tasks provider/mutation candidate must continue to pass the repository's existing CI and integration gates plus Calendar-specific tests covering at least:
 
 - hidden/disabled behavior;
 - bearer authentication and fail-closed configuration;
@@ -153,4 +230,19 @@ Before this source candidate can advance, the exact revision must pass the repos
 - attributable minimized activity records;
 - migration drift and ordinary Tasks regression coverage.
 
-Source validation alone does not establish production readiness. The GoreeCloud Calendar consumer must be implemented and validated separately, followed by environment-specific service identity, privacy, security, continuity, deployment, failure-mode, and application acceptance evidence required by current GoreeCloud standards.
+The outgoing Calendar busy-time consumer adds contract coverage for:
+
+- exact schema/version and field allowlists;
+- timezone-aware and bounded response ranges;
+- returned-count consistency;
+- interval ordering, merging, and range containment;
+- exact request/response range agreement;
+- HTTPS except loopback validation;
+- bearer-header construction without URL credentials;
+- malformed, oversized, HTTP-error, and transport-error fail-closed behavior;
+- disabled/invalid client configuration;
+- mutually exclusive token sources;
+- protected file-secret permission checks; and
+- absence of Tasks-side Calendar subject/collection selectors.
+
+Before Calendar busy context may be described as integrated into the Tasks product, the exact consumer candidate must pass Tasks CI and a disposable live cross-application wire test against the exact Calendar provider candidate. UI consumption, production authorization, representative deployment, and application acceptance remain separate gates.
