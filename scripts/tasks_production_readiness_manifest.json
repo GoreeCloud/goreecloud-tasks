@@ -54,7 +54,7 @@
       "workflow_path": ".github/workflows/platform-contract.yml",
       "workflow_name": "Platform Contract",
       "required_jobs": ["validate"],
-      "evidence_scope": "exact-revision canonical GoreeCloud Platform Contract v0.1 manifest validation with explicit lifecycle, platform-system integration, continuity, compatibility, and conformance blockers"
+      "evidence_scope": "exact-revision canonical GoreeCloud Platform Contract v0.2 validation with computed conformance, explicit lifecycle, platform-system results, continuity, compatibility, evidence containers, and blockers"
     },
     {
       "workflow_path": ".github/workflows/calendar-busy-contract.yml",
