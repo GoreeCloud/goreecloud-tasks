@@ -4,6 +4,7 @@ from django.urls import path
 
 from collaboration import views as collaboration_views
 
+from . import agenda as agenda_views
 from . import overdue as overdue_views
 from . import recurrence as recurrence_views
 from . import views
@@ -16,6 +17,7 @@ urlpatterns = [
     path("today/", views.today, name="today"),
     path("overdue/", overdue_views.overdue, name="overdue"),
     path("upcoming/", views.upcoming, name="upcoming"),
+    path("agenda/", agenda_views.agenda, name="agenda"),
     path("shared/", work_views.shared_work, name="shared_work"),
     path("goreecloud/", work_views.goreecloud_work, name="goreecloud_work"),
     path("search/", views.search, name="search"),

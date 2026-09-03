@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Agenda — GoreeCloud Tasks{% endblock %}
+
+{% block content %}
+<div class="app-shell agenda-shell">
+  {% include "tasks/_sidebar.html" %}
+
+  <section class="task-panel agenda-panel" aria-labelledby="agenda-heading">
+    <header class="panel-heading agenda-heading">
+      <div>
+        <p class="eyebrow">Seven-day planning workspace</p>
+        <h1 id="agenda-heading">Agenda</h1>
+        <p class="agenda-window">{{ window_label }}</p>
+      </div>
+      <div class="agenda-summary" aria-label="Agenda summary">
+        <span><strong>{{ task_count }}</strong> scheduled task{{ task_count|pluralize }}</span>
+        {% if calendar_state == "available" %}
+          <span><strong>{{ busy_interval_count }}</strong> Calendar busy block{{ busy_interval_count|pluralize }}</span>
+        {% endif %}
+      </div>
+    </header>
+
+    <div class="agenda-calendar-status" role="status">
+      {% if calendar_state == "available" %}
+        <strong>Calendar context available.</strong>
+        <span>Only privacy-minimized busy times are shown; event content stays in GoreeCloud Calendar.</span>
+      {% elif calendar_state == "unavailable" %}
+        <strong>Calendar context is temporarily unavailable.</strong>
+        <span>Your Tasks schedule remains available and unchanged.</span>
+      {% elif calendar_state == "not-authorized" %}
+        <strong>Calendar context is not available for this Tasks account.</strong>
+        <span>No Calendar request was made.</span>
+      {% else %}
+        <strong>Calendar context is not connected.</strong>
+        <span>The Agenda continues to show scheduled Tasks only.</span>
+      {% endif %}
+    </div>
+
+    <div class="agenda-days">
+      {% for day in agenda_days %}
+        <section class="agenda-day{% if day.is_today %} agenda-day-today{% endif %}" aria-labelledby="agenda-day-{{ day.date|date:'Y-m-d' }}">
+          <header class="agenda-day-heading">
+            <div>
+              <p class="agenda-day-kicker">{% if day.is_today %}Today{% else %}Day {{ forloop.counter }}{% endif %}</p>
+              <h2 id="agenda-day-{{ day.date|date:'Y-m-d' }}">
+                <time datetime="{{ day.date|date:'Y-m-d' }}">{{ day.label }}</time>
+              </h2>
+            </div>
+            <span class="agenda-day-count">{{ day.tasks|length }} task{{ day.tasks|length|pluralize }}</span>
+          </header>
+
+          <div class="agenda-lanes">
+            <section class="agenda-lane" aria-label="Scheduled tasks">
+              <h3>Tasks</h3>
+              {% if day.tasks %}
+                <ul class="agenda-task-list">
+                  {% for task in day.tasks %}
+                    <li class="agenda-task-point">
+                      <div class="agenda-task-time">
+                        <time datetime="{{ task.due_at|date:'c' }}">{{ task.agenda_due_local|date:"g:i A" }}</time>
+                        <span>Due</span>
+                      </div>
+                      {% if task.user_can_edit %}
+                        <form class="complete-form" method="post" action="{% url 'tasks:task_toggle_complete' task.pk %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                          <button class="complete-button" type="submit" aria-label="Complete {{ task.title }}">✓</button>
+                        </form>
+                      {% else %}
+                        <span class="complete-button read-only-indicator" aria-hidden="true"></span>
+                      {% endif %}
+                      <div class="agenda-task-content">
+                        <div class="task-title-line">
+                          <a class="task-title" href="{% url 'tasks:task_detail' task.pk %}">{{ task.title }}</a>
+                          {% if not task.user_can_edit %}<span class="read-only-badge">Read only</span>{% endif %}
+                        </div>
+                        <p class="agenda-task-meta">
+                          {{ task.get_priority_display }}
+                          {% if task.project %} · {{ task.project.name }}{% else %} · Inbox{% endif %}
+                          {% if task.assignee %} · {{ task.assignee.preferred_name }}{% endif %}
+                        </p>
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="agenda-lane-empty">No scheduled Tasks on this day.</p>
+              {% endif %}
+            </section>
+
+            <section class="agenda-lane agenda-calendar-lane" aria-label="GoreeCloud Calendar busy context">
+              <h3>Calendar context</h3>
+              {% if calendar_state == "available" %}
+                {% if day.busy %}
+                  <ul class="agenda-busy-list">
+                    {% for interval in day.busy %}
+                      <li class="agenda-busy-block">
+                        <span class="agenda-busy-label">Calendar busy</span>
+                        <span class="agenda-busy-time">
+                          {% if interval.continues_before %}Continues · {% endif %}
+                          <time datetime="{{ interval.starts_at|date:'c' }}">{{ interval.starts_at|date:"g:i A" }}</time>
+                          –
+                          <time datetime="{{ interval.ends_at|date:'c' }}">{{ interval.ends_at|date:"g:i A" }}</time>
+                          {% if interval.continues_after %} · Continues{% endif %}
+                        </span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="agenda-lane-empty">No busy intervals were returned for this day.</p>
+                {% endif %}
+              {% elif calendar_state == "not-authorized" %}
+                <p class="agenda-lane-empty">Calendar context is not authorized for this Tasks account.</p>
+              {% elif calendar_state == "unavailable" %}
+                <p class="agenda-lane-empty">Calendar context is unavailable. No free-time assumption is made.</p>
+              {% else %}
+                <p class="agenda-lane-empty">Connect the approved Calendar busy-context integration to add privacy-minimized planning context.</p>
+              {% endif %}
+            </section>
+          </div>
+        </section>
+      {% endfor %}
+    </div>
+
+    <footer class="agenda-boundary-note">
+      <strong>Scheduling boundary:</strong>
+      A task due time is shown as a point in time, not a duration or reserved block. Calendar busy intervals remain read-only Calendar context.
+    </footer>
+  </section>
+</div>
+{% endblock %}
