@@ -3,66 +3,132 @@
 {% block title %}{{ heading }} — GoreeCloud Tasks{% endblock %}
 
 {% block content %}
-<div class="app-shell">
+<div class="app-shell tasks-workspace-shell">
   {% include "tasks/_sidebar.html" %}
 
-  <section class="task-panel">
-    <header class="panel-heading">
-      <div>
+  <section class="task-panel workspace-panel">
+    <header class="workspace-heading">
+      <div class="workspace-title-block">
         <p class="eyebrow">{{ eyebrow }}</p>
-        <h1>{{ heading }}</h1>
+        <div class="workspace-title-line">
+          <h1>{{ heading }}</h1>
+          <span class="count" aria-label="{{ task_count }} tasks">{{ task_count }}</span>
+        </div>
       </div>
-      <span class="count">{{ task_count }}</span>
+
+      <nav class="workspace-view-switch" aria-label="Planning shortcuts">
+        {% if active_view != 'today' %}
+          <a class="workspace-shortcut" href="{% url 'tasks:today' %}">Today</a>
+        {% endif %}
+        {% if active_view != 'upcoming' %}
+          <a class="workspace-shortcut" href="{% url 'tasks:upcoming' %}">Upcoming</a>
+        {% endif %}
+        {% if active_view != 'overdue' %}
+          <a class="workspace-shortcut" href="{% url 'tasks:overdue' %}">Overdue</a>
+        {% endif %}
+      </nav>
     </header>
 
     {% include "tasks/_quick_add.html" %}
 
     {% if tasks %}
-      <ul class="task-list">
-        {% for task in tasks %}
-          <li class="task-row">
-            {% if task.user_can_edit %}
-              <form class="complete-form" method="post" action="{% url 'tasks:task_toggle_complete' task.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button class="complete-button" type="submit" aria-label="Complete {{ task.title }}">✓</button>
-              </form>
+      <section class="task-collection" aria-labelledby="task-collection-heading">
+        <header class="task-collection-heading">
+          <div>
+            {% if active_view == 'today' %}
+              <h2 id="task-collection-heading">Due today</h2>
+              <p>Work scheduled for your current local day.</p>
+            {% elif active_view == 'upcoming' %}
+              <h2 id="task-collection-heading">Scheduled ahead</h2>
+              <p>Your next dated tasks in chronological order.</p>
+            {% elif active_view == 'overdue' %}
+              <h2 id="task-collection-heading">Needs attention</h2>
+              <p>Past-due work that is still active.</p>
+            {% elif active_view == 'inbox' %}
+              <h2 id="task-collection-heading">Inbox tasks</h2>
+              <p>Private work captured outside a project.</p>
+            {% elif active_view == 'search' %}
+              <h2 id="task-collection-heading">Matches</h2>
+              <p>Only work your account is authorized to read.</p>
             {% else %}
-              <span class="complete-button read-only-indicator" aria-hidden="true"></span>
+              <h2 id="task-collection-heading">Tasks</h2>
+              <p>Accessible work in this view.</p>
             {% endif %}
-            <div class="task-content">
-              <div class="task-title-line">
-                <a class="task-title" href="{% url 'tasks:task_detail' task.pk %}">{{ task.title }}</a>
-                {% if not task.user_can_edit %}
-                  <span class="read-only-badge">Read only</span>
+          </div>
+          <span class="task-collection-count">{{ task_count }}</span>
+        </header>
+
+        <ul class="task-list workspace-task-list">
+          {% for task in tasks %}
+            <li class="task-row workspace-task-row">
+              {% if task.user_can_edit %}
+                <form class="complete-form" method="post" action="{% url 'tasks:task_toggle_complete' task.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button class="complete-button" type="submit" aria-label="Complete {{ task.title }}">✓</button>
+                </form>
+              {% else %}
+                <span class="complete-button read-only-indicator" aria-hidden="true"></span>
+              {% endif %}
+
+              <div class="task-content">
+                <div class="task-title-line">
+                  <a class="task-title" href="{% url 'tasks:task_detail' task.pk %}">{{ task.title }}</a>
+                  {% if not task.user_can_edit %}
+                    <span class="read-only-badge">Read only</span>
+                  {% endif %}
+                </div>
+
+                {% if task.description %}
+                  <p class="task-description">{{ task.description|truncatechars:160 }}</p>
+                {% endif %}
+
+                <div class="task-facts" aria-label="Task details">
+                  {% if task.due_at %}
+                    <span class="task-fact task-fact-time">{{ task.due_at|date:"D, M j · g:i A" }}</span>
+                  {% endif %}
+                  {% if task.project %}
+                    <span class="task-fact">{{ task.project.name }}</span>
+                  {% else %}
+                    <span class="task-fact">Inbox</span>
+                  {% endif %}
+                  {% if task.assignee %}
+                    <span class="task-fact">{{ task.assignee.preferred_name }}</span>
+                  {% endif %}
+                  {% if task.parent %}
+                    <span class="task-fact">Subtask of {{ task.parent.title }}</span>
+                  {% endif %}
+                </div>
+
+                {% if task.labels.all %}
+                  <div class="label-chip-row">
+                    {% for label in task.labels.all %}<span class="label-chip">{{ label.name }}</span>{% endfor %}
+                  </div>
                 {% endif %}
               </div>
-              {% if task.description %}
-                <p class="task-description">{{ task.description|truncatechars:160 }}</p>
-              {% endif %}
-              {% if task.labels.all %}
-                <div class="label-chip-row">
-                  {% for label in task.labels.all %}<span class="label-chip">{{ label.name }}</span>{% endfor %}
-                </div>
-              {% endif %}
-              <div class="task-meta">
-                {{ task.get_priority_display }} · {{ task.get_status_display }}
-                {% if task.parent %} · Subtask of {{ task.parent.title }}{% endif %}
-                {% if task.project %} · {{ task.project.name }}{% endif %}
-                {% if task.assignee %} · Assigned to {{ task.assignee.preferred_name }}{% endif %}
-                {% if task.due_at %} · Due {{ task.due_at|date:"M j, Y g:i A" }}{% endif %}
-                · <a href="{% url 'notifications:settings' %}?task={{ task.pk }}">Remind me</a>
+
+              <div class="task-row-actions" aria-label="Task status and actions">
+                <span class="task-state-chip">{{ task.get_priority_display }}</span>
+                <span class="task-state-chip">{{ task.get_status_display }}</span>
+                <a class="task-reminder-link" href="{% url 'notifications:settings' %}?task={{ task.pk }}">Reminder</a>
               </div>
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
     {% else %}
-      <div class="empty-state">
+      <div class="empty-state workspace-empty-state">
         <h2>{{ empty_heading }}</h2>
         <p>{{ empty_copy }}</p>
       </div>
     {% endif %}
   </section>
 </div>
+
+<nav class="mobile-dock" aria-label="Mobile task navigation" data-glz-surface="system-overlay" data-glz-material="glaze">
+  <a{% if active_view == 'today' %} class="active" aria-current="page"{% endif %} href="{% url 'tasks:today' %}">Today</a>
+  <a{% if active_view == 'inbox' %} class="active" aria-current="page"{% endif %} href="{% url 'tasks:dashboard' %}">Inbox</a>
+  <a{% if active_view == 'search' %} class="active" aria-current="page"{% endif %} href="{% url 'tasks:search' %}">Search</a>
+  <a href="{% url 'projects:list' %}">Projects</a>
+</nav>
 {% endblock %}

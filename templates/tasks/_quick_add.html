@@ -1,23 +1,29 @@
-<form class="quick-add" method="post" action="{% url 'tasks:quick_add' %}">
+<form class="quick-add task-capture" method="post" action="{% url 'tasks:quick_add' %}">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ request.get_full_path }}">
-  <div class="quick-add-main">
+
+  <div class="quick-add-main capture-main">
+    <span class="capture-mark" aria-hidden="true">+</span>
     {{ quick_add_form.title }}
-    <button class="primary-button compact" type="submit">Add task</button>
+    <button class="primary-button compact" type="submit">Capture task</button>
   </div>
-  <div class="quick-add-options">
-    <label>
-      <span>Location</span>
-      {{ quick_add_form.project }}
-    </label>
-    <label>
-      <span>Priority</span>
-      {{ quick_add_form.priority }}
-    </label>
-    <label>
-      <span>Due</span>
-      {{ quick_add_form.due_at }}
-    </label>
-    <a class="secondary-link" href="{% url 'tasks:task_create' %}">Full editor</a>
-  </div>
+
+  <details class="capture-details">
+    <summary>Schedule and organize</summary>
+    <div class="quick-add-options capture-options">
+      <label>
+        <span>Project</span>
+        {{ quick_add_form.project }}
+      </label>
+      <label>
+        <span>Priority</span>
+        {{ quick_add_form.priority }}
+      </label>
+      <label>
+        <span>Due</span>
+        {{ quick_add_form.due_at }}
+      </label>
+      <a class="secondary-link capture-full-editor" href="{% url 'tasks:task_create' %}">Open full editor</a>
+    </div>
+  </details>
 </form>
