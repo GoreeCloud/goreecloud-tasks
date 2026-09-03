@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed source validation for the GoreeCloud Tasks Glaze UI consumer contract."""
+"""Fail-closed source validation for the GoreeCloud Tasks GLAZE UI V1.0 migration."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET_VERSION = "1.3.0"
-GLAZE_REVISION = "96cc27050c098a5f06f571923f0cb9be54989a92"
+TARGET_VERSION = "1.0.0"
+GLAZE_SOURCE_REVISION = "70909bbdccad378fb7281ae1842e2f5beed64c38"
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
-        raise SystemExit(f"Tasks Glaze UI consumer validation failed: {message}")
+        raise SystemExit(f"Tasks GLAZE UI V1.0 source validation failed: {message}")
 
 
 def read(path: str) -> str:
@@ -26,50 +26,97 @@ def main() -> None:
     base = read("templates/base.html")
     glaze = read("static/css/glaze.css")
     contract = read("docs/glaze-ui.md")
+    platform = read("goreecloud.platform.yaml")
+    conformance = read("docs/PLATFORM_CONFORMANCE.md")
     rendered = read("scripts/validate_glaze_ui_rendered.py")
     workflow = read(".github/workflows/ci.yml")
 
-    # Version and lifecycle boundary.
-    require(f'data-glaze-ui="{TARGET_VERSION}"' in base, "base template must declare the Glaze UI target version")
-    require('data-glaze-consumer-status="adoption-candidate"' in base, "base template must retain Adoption Candidate status")
-    require(f"Glaze UI {TARGET_VERSION} Stable semantic contract" in contract, "consumer contract target version is missing")
-    require("Consumer status:** Adoption Candidate" in contract, "consumer contract must not silently claim Stable production acceptance")
-    require(GLAZE_REVISION in contract, "consumer contract must record the reviewed canonical Glaze revision")
-    require("does **not** claim that Tasks has completed production visual acceptance" in contract, "visual-acceptance boundary is missing")
-    require("does **not** import or claim Glaze UI 1.4" in contract, "1.4 Candidate boundary is missing")
+    # Exact V1 identity and fail-closed downstream lifecycle boundary.
+    require(f'data-glaze-ui="{TARGET_VERSION}"' in base, "base template must declare GLAZE UI V1.0")
+    require(
+        f'data-glaze-source-revision="{GLAZE_SOURCE_REVISION}"' in base,
+        "base template must pin the exact canonical V1 source revision",
+    )
+    require(
+        'data-glaze-consumer-status="migration-in-progress"' in base,
+        "base template must not claim completed consumer acceptance",
+    )
+    require('class="glz1-workspace"' in base, "base template must use the V1 workspace semantic class")
+    require("viewport-fit=cover" in base, "viewport-fit=cover is required for bounded handheld rendering")
+    require('name="referrer" content="same-origin"' in base, "same-origin referrer boundary is missing")
+    require(
+        'href="#main-content"' in base and 'id="main-content" tabindex="-1"' in base,
+        "skip-link/main focus target is missing",
+    )
+    require('data-glz-shell="application"' in base, "Application shell classification is missing")
+    require('data-glz-surface="system-overlay"' in base, "System Overlay classification is missing")
 
-    # The compatibility layer must be loaded last so it can enforce the semantic contract.
+    contract_plain = contract.replace("**", "")
+    require("GLAZE UI V1.0 (`1.0.0`)" in contract, "consumer contract target version is missing")
+    require(GLAZE_SOURCE_REVISION in contract, "consumer contract must record the exact V1 source revision")
+    require("Official reset baseline; production acceptance pending" in contract, "upstream reset lifecycle boundary is missing")
+    require("Migration in progress" in contract, "downstream migration boundary is missing")
+    require("does not establish production acceptance" in contract_plain, "production-acceptance non-claim is missing")
+    require("not a retired Glaze product version" in contract, "rollback must use an exact Tasks revision, not a retired Glaze version")
+
+    # Current controlled records must use V1 as the sole active Glaze identity.
+    active_records = {
+        "base template": base,
+        "consumer contract": contract,
+        "platform manifest": platform,
+        "platform conformance": conformance,
+        "consumer CSS": glaze,
+        "rendered validator": rendered,
+    }
+    for name, content in active_records.items():
+        require("Glaze UI 2.2" not in content and "GLAZE UI 2.2" not in content, f"{name} retains retired 2.2 identity")
+        require('data-glaze-ui="1.3.0"' not in content, f"{name} retains retired 1.3 active marker")
+
+    require('version: "1.0.0"' in platform, "Platform Contract must record V1 implementation version")
+    require("glaze-ui==1.0.0" in platform, "Platform compatibility must target exact reset version")
+    require("status: nonconformant" in platform, "Platform Contract must remain nonconformant")
+    require("upstream V1 production eligibility" in platform, "Platform Contract must preserve upstream production boundary")
+    require("GLAZE UI V1.0 (`1.0.0`) is the official and only current" in conformance, "platform conformance record is not reset to V1")
+
+    # The compatibility layer remains local and last so product CSS cannot silently override it.
     css_links = re.findall(r"static 'css/([^']+)'", base)
     require(css_links, "base template contains no local CSS links")
     require(css_links[-1] == "glaze.css", "glaze.css must load after product-specific styles")
-    require(all(not item.startswith(("http://", "https://", "//")) for item in css_links), "remote CSS dependency detected")
     require('<meta name="color-scheme" content="light dark">' in base, "light/dark color-scheme metadata is missing")
 
-    # Canonical Stable 1.3 semantic values used by this consumer mapping.
+    # Exact source provenance and canonical glz1 semantic namespace.
     required_token_markers = (
-        '--glaze-version: "1.3.0"',
-        "--glaze-canvas: #0d1119",
-        "--glaze-text: #f3f6fb",
-        "--glaze-accent: #7aa2ff",
-        "--glaze-focus-ring: #a9c2ff",
-        "--glaze-target-min: 44px",
-        "--glaze-radius-control: 16px",
-        "--glaze-glass-blur: 24px",
-        "--glaze-motion-fast: 160ms",
-        "--glaze-canvas: #eef3f9",
-        "--glaze-text: #172033",
-        "--glaze-accent: #366cf6",
-        "--glaze-focus-ring: #244fc6",
+        '--tasks-glaze-version: "1.0.0"',
+        f'--tasks-glaze-source-revision: "{GLAZE_SOURCE_REVISION}"',
+        "--glz1-canvas: #f5f7fa",
+        "--glz1-canvas: #0b0d11",
+        "--glz1-base: #ffffff",
+        "--glz1-base: #12151b",
+        "--glz1-text-primary: #151a23",
+        "--glz1-text-primary: #f5f7fa",
+        "--glz1-focus: #3478f6",
+        "--glz1-focus: #8db5ff",
+        "--glz1-target-shell: 48px",
+        "--glz1-target-assisted: 56px",
+        "--glz1-overlay-blur: 22px",
+        "--glz1-panel-blur: 28px",
     )
     for marker in required_token_markers:
-        require(marker in glaze, f"missing canonical semantic token marker: {marker}")
+        require(marker in glaze, f"missing V1 semantic marker: {marker}")
 
-    # Themes, surface hierarchy, privacy, and fallback behavior.
     for marker in (
-        "@media (prefers-color-scheme: light)",
-        "Functional Glass: navigation and interactive chrome only.",
-        ".topbar,\n.sidebar",
-        "Solid/Raised remain the normal content surfaces.",
+        "System Overlay navigation chrome",
+        "Solid/Raised remain the normal content and durable reading surfaces",
+        "Critical and destructive decisions are certainty-first Solid surfaces",
+        "nested backdrop blur is suppressed",
+        '[data-glz-appearance="deep-dark"]',
+        '[data-glz-input="touch"]',
+        '[data-glz-touch-assistance="true"]',
+        '[data-glz-text-scale="200"]',
+        '[data-glz-transparency="reduced"]',
+        '[data-glz-performance="reduced"]',
+        'html[data-mode="increased-contrast"]',
+        'html[data-mode="large-text"]',
         "@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))",
         "@media (prefers-reduced-transparency: reduce)",
         "@media (prefers-reduced-motion: reduce)",
@@ -77,22 +124,26 @@ def main() -> None:
         "@media (forced-colors: active)",
         "::selection",
     ):
-        require(marker in glaze, f"missing theme/material/resilience contract: {marker}")
+        require(marker in glaze, f"missing V1 material/adaptive/resilience contract: {marker}")
 
-    # Actionable target and focus requirements.
-    require("min-height: var(--glaze-target-min);" in glaze, "minimum target enforcement is missing")
-    require(".complete-button {\n  width: var(--glaze-target-min);\n  height: var(--glaze-target-min);" in glaze, "task completion target must be at least 44px")
-    require(".nav-item {\n  min-height: var(--glaze-target-min);" in glaze, "navigation target must be at least 44px")
-    require("button:focus-visible" in glaze and "summary:focus-visible" in glaze, "shared focus-visible treatment is incomplete")
-    require("outline: var(--glaze-focus-width) solid var(--glaze-focus-ring) !important;" in glaze, "semantic focus ring is missing")
-
-    # Resilience must remove motion rather than merely accelerate ordinary motion.
+    require("min-block-size: var(--glz1-target-shell);" in glaze, "48px V1 target enforcement is missing")
+    require(
+        ".complete-button {\n  inline-size: var(--glz1-target-shell);\n  block-size: var(--glz1-target-shell);" in glaze,
+        "task completion control must use the normal 48px floor",
+    )
+    require(
+        '[data-glz-touch-assistance="true"] .complete-button' in glaze
+        and "inline-size: var(--glz1-target-assisted);" in glaze,
+        "task completion control must grow to the 56px assisted floor",
+    )
+    require("button:focus-visible" in glaze and "summary:focus-visible" in glaze, "focus-visible treatment is incomplete")
+    require("button:focus," in glaze and "summary:focus," in glaze, "deterministic focus fallback is incomplete")
+    require("outline: var(--glz1-focus-width) solid var(--glz1-focus) !important;" in glaze, "semantic focus ring is missing")
     require("transition-duration: 0.01ms !important" in glaze, "reduced-motion transition suppression is missing")
     require("animation-duration: 0.01ms !important" in glaze, "reduced-motion animation suppression is missing")
-    require("background: var(--glaze-surface-strong);" in glaze, "solid-surface fallback is missing")
-    require("forced-color-adjust: none" in glaze, "forced-colors state protection is missing")
+    require("forced-color-adjust: none" in glaze, "forced-colors selected-state protection is missing")
 
-    # The rendered gate must exercise real Django surfaces and representative modes.
+    # Rendered acceptance must exercise representative real Django surfaces and V1 modes.
     for marker in (
         '"dashboard"',
         '"task-detail"',
@@ -104,27 +155,45 @@ def main() -> None:
         'for theme in ("light", "dark")',
         'mode="reduced-motion"',
         'mode="forced-colors"',
+        'mode="touch-assistance"',
+        'mode="text-200"',
+        'mode="reduced-transparency"',
+        'mode="increased-contrast"',
         "doc.documentElement.scrollWidth<=frame.clientWidth+1",
-        "rect.height>=43.5",
+        "55.5:47.5",
+        "root.dataset.glzTouchAssistance='true'",
+        "root.dataset.glzTextScale='200'",
+        "root.dataset.glzTransparency='reduced'",
+        "root.dataset.mode='increased-contrast'",
     ):
-        require(marker in rendered, f"rendered acceptance missing required coverage marker: {marker}")
+        require(marker in rendered, f"rendered acceptance missing required V1 coverage marker: {marker}")
 
-    # CI must validate the exact candidate SHA, not GitHub's synthetic PR merge ref.
+    # CI validates the exact candidate SHA, not GitHub's synthetic merge ref.
     require("Validate Glaze UI consumer source contract" in workflow, "CI is missing source-level Glaze validation")
     require("Validate rendered Glaze UI adoption" in workflow, "CI is missing rendered Glaze validation")
     exact_ref = "ref: ${{ github.event.pull_request.head.sha || github.sha }}"
     require(workflow.count(exact_ref) >= 7, "all Tasks CI jobs must check out the exact candidate revision")
     require(workflow.count("persist-credentials: false") >= 9, "Tasks and pinned cross-app checkouts must avoid persisted credentials")
 
-    # The consumer layer itself must remain local and tracker-free.
+    # No remote presentation, retired active namespace, or tracking dependency.
     lowered = glaze.lower()
-    for forbidden in ("https://", "http://", "@import", "analytics", "tracker", "googletagmanager", "fonts.googleapis"):
-        require(forbidden not in lowered, f"forbidden remote/presentation dependency marker in glaze.css: {forbidden}")
+    for forbidden in (
+        "https://",
+        "http://",
+        "@import",
+        ".candidate.css",
+        ".candidate.mjs",
+        "analytics",
+        "tracker",
+        "googletagmanager",
+        "fonts.googleapis",
+    ):
+        require(forbidden not in lowered, f"forbidden presentation/dependency marker in glaze.css: {forbidden}")
 
     print(
-        "GoreeCloud Tasks Glaze UI consumer source contract validated: "
-        f"target {TARGET_VERSION}, status Adoption Candidate, reviewed Glaze revision {GLAZE_REVISION}; "
-        "rendered acceptance and exact-head CI are fail-closed"
+        "GoreeCloud Tasks GLAZE UI V1.0 source contract validated: "
+        f"target {TARGET_VERSION}, source {GLAZE_SOURCE_REVISION}, migration in progress; "
+        "rendered, upstream production, application acceptance, release, and production gates remain separate"
     )
 
 
