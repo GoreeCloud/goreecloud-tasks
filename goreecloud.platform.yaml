@@ -24,10 +24,12 @@ api:
 glaze_ui:
   applicable: true
   required_version: "2.2.0"
-  implemented_version: null
-  migration_status: required
+  implemented_version: "2.2.0"
+  migration_status: in_progress
   evidence:
-    - tasks-readme
+    - tasks-glaze-source
+    - tasks-glaze-rendered-validator
+    - tasks-glaze-doc
 platform_systems:
   manager:
     status: "Applicable — Nonconformant"
@@ -61,9 +63,11 @@ platform_systems:
       - tasks-readme
   glaze_ui:
     status: "Applicable — Migration Required"
-    justification: Current Glaze UI 2.2.0 rendered, accessibility, and supported-platform acceptance evidence does not yet exist for Tasks.
+    justification: Repository-local Glaze UI 2.2 source implementation and automated rendered gates exist, but exact-head application acceptance, release, and deployment evidence remain incomplete.
     evidence:
-      - tasks-readme
+      - tasks-glaze-source
+      - tasks-glaze-rendered-validator
+      - tasks-glaze-doc
 mesh:
   registration: required
   capabilities:
@@ -130,22 +134,22 @@ conformance:
   declared_state: migration_required
   stable_eligible: false
   checks:
-    - {id: glaze-ui, mandatory: true, status: pending, evidence: [tasks-readme], note: "Glaze UI 2.2 implementation and acceptance are incomplete."}
+    - {id: glaze-ui, mandatory: true, status: pending, evidence: [tasks-glaze-source, tasks-glaze-rendered-validator, tasks-glaze-doc], note: "Glaze UI 2.2 source implementation exists; exact-head application acceptance, release, and deployment evidence remain incomplete."}
     - {id: goreecloud-identity, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: wardveil-security, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: privacy-shield, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: everkeep-recovery, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: mesh-registration, mandatory: true, status: pending, evidence: []}
     - {id: api-compatibility, mandatory: true, status: pending, evidence: [tasks-readme]}
-    - {id: accessibility, mandatory: true, status: pending, evidence: []}
+    - {id: accessibility, mandatory: true, status: pending, evidence: [tasks-glaze-source, tasks-glaze-rendered-validator]}
     - {id: platform-acceptance, mandatory: true, status: pending, evidence: []}
     - {id: backup, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: restore, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: export-portability, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: security-validation, mandatory: true, status: pending, evidence: [tasks-readme]}
     - {id: privacy-validation, mandatory: true, status: pending, evidence: [tasks-readme]}
-    - {id: required-documentation, mandatory: true, status: pass, evidence: [tasks-readme]}
-    - {id: required-tests, mandatory: true, status: pending, evidence: [tasks-readme]}
+    - {id: required-documentation, mandatory: true, status: pass, evidence: [tasks-readme, tasks-glaze-doc]}
+    - {id: required-tests, mandatory: true, status: pending, evidence: [tasks-glaze-rendered-validator]}
     - {id: release-evidence, mandatory: true, status: pending, evidence: []}
 evidence:
   acceptance:
@@ -156,4 +160,25 @@ evidence:
       observed_at: null
       producer: GoreeCloud/goreecloud-tasks
       description: Repository-local current implementation, authorization, portability, health, deployment, recovery-blocker, and validation documentation. Documentation alone does not satisfy implementation gates.
+    - id: tasks-glaze-source
+      kind: source
+      location: static/css/glaze.css
+      revision: null
+      observed_at: null
+      producer: GoreeCloud/goreecloud-tasks
+      description: Repository-local Glaze UI 2.2 compatibility implementation pinned to the canonical Stable release revision; source presence does not establish rendered or production acceptance.
+    - id: tasks-glaze-rendered-validator
+      kind: automated_test
+      location: scripts/validate_glaze_ui_rendered.py
+      revision: null
+      observed_at: null
+      producer: GoreeCloud/goreecloud-tasks
+      description: Fail-closed rendered browser gate for representative Tasks surfaces, 48/56 target geometry, reflow, themes, and accessibility modes; a validator definition is not a successful exact-head run.
+    - id: tasks-glaze-doc
+      kind: documentation
+      location: docs/glaze-ui.md
+      revision: null
+      observed_at: null
+      producer: GoreeCloud/goreecloud-tasks
+      description: Repository-local Glaze UI 2.2 implementation and evidence-boundary documentation.
   release: []
