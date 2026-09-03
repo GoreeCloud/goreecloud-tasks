@@ -313,27 +313,53 @@ class CalendarBusyConfigurationTests(SimpleTestCase):
     def base_environment(self):
         return {
             "TASKS_CALENDAR_BUSY_ENABLED": "true",
+            "TASKS_CALENDAR_BUSY_USERNAME": "calendar-user",
             "TASKS_CALENDAR_BUSY_BASE_URL": "https://calendar.internal.example",
             "TASKS_CALENDAR_BUSY_TOKEN": TOKEN,
             "TASKS_CALENDAR_BUSY_TOKEN_FILE": "",
             "TASKS_CALENDAR_BUSY_TIMEOUT_SECONDS": "5",
         }
 
-    def test_disabled_configuration_requires_no_network_or_secret_values(self):
+    def test_disabled_configuration_requires_no_identity_network_or_secret_values(self):
         config = load_calendar_busy_client_configuration(
             {"TASKS_CALENDAR_BUSY_ENABLED": "false"}
         )
         self.assertFalse(config.enabled)
         self.assertIsNone(config.error)
 
-    def test_valid_configuration_has_no_subject_or_collection_selector(self):
+    def test_valid_configuration_binds_local_recipient_not_calendar_scope(self):
         config = load_calendar_busy_client_configuration(self.base_environment())
         self.assertTrue(config.enabled)
         self.assertIsNone(config.error)
+        self.assertEqual(config.username, "calendar-user")
         self.assertEqual(config.base_url, "https://calendar.internal.example")
         self.assertEqual(config.timeout_seconds, 5)
         self.assertFalse(hasattr(config, "subject"))
         self.assertFalse(hasattr(config, "calendar_hrefs"))
+
+    def test_local_recipient_gate_is_exact_active_and_authenticated(self):
+        config = load_calendar_busy_client_configuration(self.base_environment())
+
+        class User:
+            def __init__(self, username, *, active=True, authenticated=True):
+                self.username = username
+                self.is_active = active
+                self.is_authenticated = authenticated
+
+        self.assertTrue(config.allows_user(User("calendar-user")))
+        self.assertFalse(config.allows_user(User("other-user")))
+        self.assertFalse(config.allows_user(User("calendar-user", active=False)))
+        self.assertFalse(
+            config.allows_user(User("calendar-user", authenticated=False))
+        )
+        self.assertFalse(config.allows_user(None))
+
+    def test_missing_local_recipient_fails_closed(self):
+        environment = self.base_environment()
+        environment["TASKS_CALENDAR_BUSY_USERNAME"] = ""
+        config = load_calendar_busy_client_configuration(environment)
+        self.assertIsNotNone(config.error)
+        self.assertFalse(config.allows_user(None))
 
     def test_external_plain_http_invalid_token_and_timeout_fail_closed(self):
         environment = self.base_environment()
