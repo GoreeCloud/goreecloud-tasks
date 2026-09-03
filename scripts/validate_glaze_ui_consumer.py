@@ -104,7 +104,7 @@ def main() -> None:
     # Target geometry, focus, and critical-state requirements.
     require("min-height: var(--glaze-target-min);" in glaze, "48px target enforcement is missing")
     require(
-        ".complete-button {\n  width: var(--glaze-target-min);\n  height: var(--glaze-target-min);",
+        ".complete-button {\n  width: var(--glaze-target-min);\n  height: var(--glaze-target-min);" in glaze,
         "task completion control must use the normal 48px floor",
     )
     require(
@@ -137,11 +137,14 @@ def main() -> None:
         'mode="forced-colors"',
         'mode="touch-assistance"',
         'mode="text-200"',
+        'mode="reduced-transparency"',
+        'mode="increased-contrast"',
         "doc.documentElement.scrollWidth<=frame.clientWidth+1",
-        "rect.height>=47.5",
-        "rect.height>=55.5",
+        "55.5:47.5",
         "root.dataset.glzTouchAssistance='true'",
         "root.dataset.glzTextScale='200'",
+        "root.dataset.glzTransparency='reduced'",
+        "root.dataset.mode='increased-contrast'",
     ):
         require(marker in rendered, f"rendered acceptance missing required 2.2 coverage marker: {marker}")
 
