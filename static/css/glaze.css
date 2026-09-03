@@ -1,16 +1,20 @@
 /*
- * GoreeCloud Tasks — Glaze UI 1.3.0 consumer compatibility layer.
+ * GoreeCloud Tasks — Glaze UI 2.2.0 Stable consumer compatibility layer.
+ * Canonical Stable release: GoreeCloud/goreecloud-glaze-ui
+ * revision 6731098b28dd0393faa878c70d989a221d714a20.
  *
- * This file maps the existing Tasks interface onto the canonical Glaze UI
- * semantic contract without copying the canonical reference stylesheet.
- * It intentionally loads after product-specific CSS so Tasks can preserve its
- * Waypoint identity while standardizing accessibility, materials, targets,
- * themes, and resilience behavior.
+ * Tasks keeps its Waypoint task-management composition. This local layer maps
+ * that product UI onto Glaze UI 2.2 semantics without copying the canonical
+ * reference stylesheet or importing Candidate implementation files.
+ *
+ * 2.2 rule: Solid where users read or make explicit critical decisions.
+ * Glazed where users interact with transient navigation or feedback chrome.
  */
 
 :root {
   color-scheme: light dark;
-  --glaze-version: "1.3.0";
+  --glaze-version: "2.2.0";
+  --glaze-release-revision: "6731098b28dd0393faa878c70d989a221d714a20";
   --glaze-canvas: #0d1119;
   --glaze-canvas-accent: #121824;
   --glaze-surface: rgba(25, 32, 45, 0.78);
@@ -28,26 +32,28 @@
   --glaze-danger: #ff8a80;
   --glaze-focus-ring: #a9c2ff;
   --glaze-selection: rgba(122, 162, 255, 0.24);
-  --glaze-state-hover: 0.08;
-  --glaze-state-pressed: 0.12;
-  --glaze-state-focus: 0.14;
+  --glaze-state-hover: 0.045;
+  --glaze-state-pressed: 0.095;
   --glaze-state-selected: 0.12;
-  --glaze-radius-sm: 10px;
-  --glaze-radius-md: 14px;
-  --glaze-radius-control: 16px;
-  --glaze-radius-lg: 22px;
+  --glaze-radius-sm: 12px;
+  --glaze-radius-md: 16px;
+  --glaze-radius-control: 20px;
+  --glaze-radius-lg: 24px;
   --glaze-radius-xl: 28px;
   --glaze-radius-pill: 999px;
-  --glaze-target-min: 44px;
-  --glaze-target-comfortable: 48px;
+  --glaze-target-min: 48px;
+  --glaze-target-assisted: 56px;
   --glaze-focus-width: 3px;
   --glaze-focus-offset: 2px;
-  --glaze-motion-fast: 160ms;
-  --glaze-motion-standard: 220ms;
+  --glaze-motion-fast: 180ms;
+  --glaze-motion-standard: 250ms;
   --glaze-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --glaze-glass-blur: 24px;
+  --glaze-glass-blur: 22px;
+  --glaze-panel-blur: 28px;
   --glaze-shadow-raised: 0 18px 54px rgba(0, 0, 0, 0.24);
   --glaze-shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --glaze-system-panel-budget: 1;
+  --glaze-floating-control-budget: 3;
 }
 
 @media (prefers-color-scheme: light) {
@@ -74,6 +80,18 @@
   }
 }
 
+/* Deep Dark is an explicit appearance state, never inferred from task status. */
+[data-glz-appearance="deep-dark"] {
+  --glaze-canvas: #05070a;
+  --glaze-canvas-accent: #0d1015;
+  --glaze-surface: rgba(18, 22, 29, 0.80);
+  --glaze-surface-strong: rgba(18, 21, 27, 0.98);
+  --glaze-surface-muted: rgba(27, 32, 40, 0.94);
+  --glaze-text: #f5f7fa;
+  --glaze-muted: #abb4c2;
+  --glaze-line: rgba(225, 232, 244, 0.15);
+}
+
 html {
   background: var(--glaze-canvas);
 }
@@ -90,7 +108,24 @@ body {
   color: var(--glaze-text);
 }
 
-/* Shared interactive contract */
+.glaze-skip-link {
+  position: fixed;
+  inset: 8px auto auto 8px;
+  z-index: 10000;
+  min-height: var(--glaze-target-min);
+  padding: 10px 14px;
+  border: 2px solid var(--glaze-focus-ring);
+  border-radius: var(--glaze-radius-control);
+  background: var(--glaze-surface-strong);
+  color: var(--glaze-text);
+  transform: translateY(-160%);
+}
+
+.glaze-skip-link:focus {
+  transform: translateY(0);
+}
+
+/* Shared interactive contract. Keyboard/direct manipulation never waits on decorative motion. */
 button,
 a,
 input,
@@ -114,6 +149,12 @@ textarea {
   min-height: max(108px, var(--glaze-target-min));
 }
 
+button:focus,
+a:focus,
+input:focus,
+select:focus,
+textarea:focus,
+summary:focus,
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -138,20 +179,30 @@ input[type="radio"] {
   align-items: center;
 }
 
-/* Functional Glass: navigation and interactive chrome only. */
+/* System Overlay navigation chrome. These are not reading/content panels. */
 .topbar,
 .sidebar {
   border-color: var(--glaze-line);
   background: var(--glaze-surface);
-  -webkit-backdrop-filter: blur(var(--glaze-glass-blur)) saturate(145%);
-  backdrop-filter: blur(var(--glaze-glass-blur)) saturate(145%);
+  -webkit-backdrop-filter: blur(var(--glaze-glass-blur)) saturate(124%);
+  backdrop-filter: blur(var(--glaze-glass-blur)) saturate(124%);
 }
 
 .topbar {
   box-shadow: var(--glaze-shadow-soft);
 }
 
-/* Solid/Raised remain the normal content surfaces. */
+/* 2.2 forbids nested backdrop blur. Descendant chrome stays effects-free. */
+.topbar .topbar,
+.topbar .sidebar,
+.sidebar .topbar,
+.sidebar .sidebar,
+[data-glz-material="glaze"] [data-glz-material="glaze"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Solid/Raised remain the normal content and durable reading surfaces. */
 .quick-add,
 .task-editor,
 .auth-card,
@@ -168,6 +219,8 @@ input[type="radio"] {
 .notice {
   border-color: var(--glaze-line);
   background: var(--glaze-surface-strong);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .quick-add,
@@ -204,6 +257,42 @@ input[type="radio"] {
 
 .owner-row {
   background: var(--glaze-surface-muted);
+}
+
+/* Critical and destructive decisions are certainty-first Solid surfaces. */
+.danger-button,
+.privacy-warning,
+.error-banner,
+.notice.error {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.privacy-warning {
+  border-color: color-mix(in srgb, var(--glaze-warning) 55%, var(--glaze-line));
+  background: color-mix(in srgb, var(--glaze-warning) 12%, var(--glaze-surface-strong));
+  color: var(--glaze-warning);
+}
+
+.notice.error,
+.error-banner {
+  border-color: var(--glaze-danger);
+}
+
+.notice.error {
+  background: color-mix(in srgb, var(--glaze-danger) 12%, var(--glaze-surface-strong));
+}
+
+.notice.success,
+.success-banner,
+.requirement-chip {
+  border-color: var(--glaze-success);
+}
+
+.notice.success,
+.requirement-chip {
+  background: color-mix(in srgb, var(--glaze-success) 12%, var(--glaze-surface-strong));
 }
 
 /* Typography and semantic color mapping. */
@@ -280,33 +369,7 @@ a.task-title:hover,
   color: var(--glaze-danger);
 }
 
-.privacy-warning {
-  border-color: color-mix(in srgb, var(--glaze-warning) 55%, var(--glaze-line));
-  background: color-mix(in srgb, var(--glaze-warning) 12%, var(--glaze-surface-strong));
-  color: var(--glaze-warning);
-}
-
-.notice.error,
-.error-banner {
-  border-color: var(--glaze-danger);
-}
-
-.notice.error {
-  background: color-mix(in srgb, var(--glaze-danger) 12%, var(--glaze-surface-strong));
-}
-
-.notice.success,
-.success-banner,
-.requirement-chip {
-  border-color: var(--glaze-success);
-}
-
-.notice.success,
-.requirement-chip {
-  background: color-mix(in srgb, var(--glaze-success) 12%, var(--glaze-surface-strong));
-}
-
-/* Controls and hit-target corrections. */
+/* Controls and 2.2 hit-target corrections. */
 .nav-item {
   min-height: var(--glaze-target-min);
   border-radius: var(--glaze-radius-sm);
@@ -318,8 +381,9 @@ a.task-title:hover,
 }
 
 .nav-item.active {
-  background: color-mix(in srgb, var(--glaze-accent) 12%, var(--glaze-surface-strong));
+  background: color-mix(in srgb, var(--glaze-accent) 14%, var(--glaze-surface-strong));
   color: var(--glaze-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--glaze-accent) 34%, transparent);
 }
 
 .nav-item.planned,
@@ -344,7 +408,7 @@ a.task-title:hover,
 
 .text-button,
 .secondary-link {
-  padding-inline: 8px;
+  padding-inline: 10px;
 }
 
 .primary-button,
@@ -370,11 +434,14 @@ a.task-title:hover,
 .danger-button {
   border-color: var(--glaze-danger);
   border-radius: var(--glaze-radius-control);
+  background: var(--glaze-surface-strong);
 }
 
 .complete-button {
   width: var(--glaze-target-min);
   height: var(--glaze-target-min);
+  min-width: var(--glaze-target-min);
+  min-height: var(--glaze-target-min);
   border-color: var(--glaze-muted);
   color: transparent;
 }
@@ -427,7 +494,88 @@ a.task-title:hover,
   color: var(--glaze-text);
 }
 
-/* Adaptive-window corrections retained on the Stable 1.3 contract. */
+/* Explicit input/adaptive states use the canonical 2.2 host vocabulary. */
+[data-glz-input="touch"] button,
+[data-glz-input="touch"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+[data-glz-input="touch"] select,
+[data-glz-input="touch"] .nav-item,
+[data-glz-input="touch"] .text-button,
+[data-glz-input="touch"] .secondary-link,
+[data-glz-input="touch"] .primary-button,
+[data-glz-input="touch"] .secondary-button,
+[data-glz-input="touch"] .danger-button,
+[data-glz-input="touch"] .button,
+[data-glz-input="touch"] .compact-control,
+[data-glz-input="touch"] .checkbox-field,
+[data-glz-input="touch"] .checkbox-line,
+[data-glz-input="touch"] .checkbox-field-group label,
+[data-glz-input="touch"] .confirm-field,
+[data-glz-input="touch"] .inline-checkbox {
+  min-height: var(--glaze-target-min);
+}
+
+[data-glz-touch-assistance="true"] button,
+[data-glz-touch-assistance="true"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+[data-glz-touch-assistance="true"] select,
+[data-glz-touch-assistance="true"] .nav-item,
+[data-glz-touch-assistance="true"] .text-button,
+[data-glz-touch-assistance="true"] .secondary-link,
+[data-glz-touch-assistance="true"] .primary-button,
+[data-glz-touch-assistance="true"] .secondary-button,
+[data-glz-touch-assistance="true"] .danger-button,
+[data-glz-touch-assistance="true"] .button,
+[data-glz-touch-assistance="true"] .compact-control,
+[data-glz-touch-assistance="true"] .checkbox-field,
+[data-glz-touch-assistance="true"] .checkbox-line,
+[data-glz-touch-assistance="true"] .checkbox-field-group label,
+[data-glz-touch-assistance="true"] .confirm-field,
+[data-glz-touch-assistance="true"] .inline-checkbox {
+  min-height: var(--glaze-target-assisted);
+}
+
+[data-glz-touch-assistance="true"] .complete-button {
+  width: var(--glaze-target-assisted);
+  height: var(--glaze-target-assisted);
+  min-width: var(--glaze-target-assisted);
+  min-height: var(--glaze-target-assisted);
+}
+
+[data-glz-text-scale="200"] {
+  font-size: 200%;
+}
+
+[data-glz-text-scale="200"] button,
+[data-glz-text-scale="200"] input,
+[data-glz-text-scale="200"] select,
+[data-glz-text-scale="200"] textarea,
+[data-glz-text-scale="200"] .nav-item,
+[data-glz-text-scale="200"] .text-button,
+[data-glz-text-scale="200"] .secondary-link,
+[data-glz-text-scale="200"] .primary-button,
+[data-glz-text-scale="200"] .secondary-button,
+[data-glz-text-scale="200"] .danger-button,
+[data-glz-text-scale="200"] .button,
+html[data-mode="large-text"] button,
+html[data-mode="large-text"] input,
+html[data-mode="large-text"] select,
+html[data-mode="large-text"] textarea {
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+[data-glz-text-scale="200"] main,
+[data-glz-text-scale="200"] .topbar,
+[data-glz-text-scale="200"] .sidebar,
+[data-glz-text-scale="200"] .account,
+[data-glz-text-scale="200"] .quick-add,
+[data-glz-text-scale="200"] .task-editor,
+[data-glz-text-scale="200"] .panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Narrow-window reachability preserves DOM and keyboard order. */
 @media (max-width: 760px) {
   .topbar {
     flex-wrap: wrap;
@@ -459,30 +607,31 @@ a.task-title:hover,
     flex: 0 0 auto;
   }
 
-  .nav-item {
-    min-height: var(--glaze-target-min);
-  }
-
   .sidebar {
     scrollbar-width: thin;
   }
 
-  .text-button,
-  .secondary-link {
-    padding-inline: 10px;
-  }
-
   .flash-region {
-    top: 122px;
+    top: 130px;
   }
 }
 
-/* Resilience: glass may never be required for readability. */
+/* Effects-free/performance fallbacks preserve semantics and target geometry. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .topbar,
   .sidebar {
     background: var(--glaze-surface-strong);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
+}
+
+[data-glz-performance="reduced"] .topbar,
+[data-glz-performance="reduced"] .sidebar {
+  background: var(--glaze-surface-strong);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -493,7 +642,23 @@ a.task-title:hover,
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
   }
+}
+
+[data-glz-transparency="reduced"] .topbar,
+[data-glz-transparency="reduced"] .sidebar,
+[data-glz-transparency="reduced"] .quick-add,
+[data-glz-transparency="reduced"] .task-editor,
+[data-glz-transparency="reduced"] .auth-card,
+[data-glz-transparency="reduced"] .project-card,
+[data-glz-transparency="reduced"] .notification-card,
+[data-glz-transparency="reduced"] .notification-boundary,
+[data-glz-transparency="reduced"] .panel {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--glaze-surface-strong);
+  box-shadow: none;
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -509,12 +674,35 @@ a.task-title:hover,
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: var(--glaze-surface-strong);
+    box-shadow: none;
   }
+}
+
+html[data-mode="increased-contrast"] {
+  --glaze-line: currentColor;
+  --glaze-focus-width: 4px;
+}
+
+html[data-mode="increased-contrast"] .topbar,
+html[data-mode="increased-contrast"] .sidebar,
+html[data-mode="increased-contrast"] .quick-add,
+html[data-mode="increased-contrast"] .task-editor,
+html[data-mode="increased-contrast"] .auth-card,
+html[data-mode="increased-contrast"] .project-card,
+html[data-mode="increased-contrast"] .notification-card,
+html[data-mode="increased-contrast"] .notification-boundary,
+html[data-mode="increased-contrast"] .panel,
+html[data-mode="increased-contrast"] input,
+html[data-mode="increased-contrast"] select,
+html[data-mode="increased-contrast"] textarea,
+html[data-mode="increased-contrast"] button {
+  border-width: 2px;
 }
 
 @media (prefers-contrast: more) {
   :root {
     --glaze-line: currentColor;
+    --glaze-focus-width: 4px;
   }
 
   .topbar,
@@ -545,28 +733,80 @@ a.task-title:hover,
     --glaze-muted: CanvasText;
     --glaze-line: CanvasText;
     --glaze-accent: LinkText;
+    --glaze-accent-2: LinkText;
     --glaze-on-accent: Canvas;
     --glaze-info: LinkText;
-    --glaze-success: LinkText;
+    --glaze-success: CanvasText;
     --glaze-warning: CanvasText;
-    --glaze-danger: LinkText;
+    --glaze-danger: CanvasText;
     --glaze-focus-ring: Highlight;
     --glaze-selection: Highlight;
   }
 
+  body,
   .topbar,
-  .sidebar {
+  .sidebar,
+  .quick-add,
+  .task-editor,
+  .auth-card,
+  .project-card,
+  .project-summary > div,
+  .member-list,
+  .membership-add-form,
+  .comment-card,
+  .read-only-note,
+  .notification-card,
+  .notification-boundary,
+  .panel,
+  .status-banner,
+  .notice,
+  input,
+  select,
+  textarea,
+  button {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 
-  .nav-item.active,
   .primary-button,
   .button,
-  .complete-button:hover,
-  .complete-button:focus-visible {
+  .nav-item.active {
     forced-color-adjust: none;
-    border: 2px solid Highlight;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  .danger-button,
+  .privacy-warning,
+  .notice.error,
+  .error-banner {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  button:focus,
+  a:focus,
+  input:focus,
+  select:focus,
+  textarea:focus,
+  summary:focus,
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible {
+    outline-color: Highlight !important;
+  }
+
+  ::selection {
     background: Highlight;
     color: HighlightText;
   }
