@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Waypoint Route Orbit candidate</title>
+  <desc id="desc">A layered route curving through three checkpoints toward a forward destination.</desc>
+  <defs>
+    <linearGradient id="bg" x1="72" y1="64" x2="444" y2="456" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67E8F9"/>
+      <stop offset=".52" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="route" x1="132" y1="366" x2="390" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".86"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#bg)"/>
+  <path d="M126 366C126 303 173 274 231 274h42c62 0 112-45 112-105" fill="none" stroke="url(#route)" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="126" cy="366" r="28" fill="#FFFFFF"/>
+  <circle cx="252" cy="274" r="22" fill="#FFFFFF" fill-opacity=".92"/>
+  <circle cx="385" cy="169" r="28" fill="#FFFFFF"/>
+  <path d="M346 136l54 33-54 33" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

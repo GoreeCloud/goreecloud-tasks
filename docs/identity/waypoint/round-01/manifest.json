@@ -1,0 +1,37 @@
+{
+  "schema": "goreecloud.tasks.waypoint.visual-review",
+  "version": 1,
+  "round": "01",
+  "status": "unapproved-review-only",
+  "canonical_identity": null,
+  "public_integration": false,
+  "runtime_integration": false,
+  "candidates": [
+    {
+      "id": "route-orbit",
+      "name": "Route Orbit",
+      "source": "route-orbit.svg",
+      "sha256": "a53d06a605187e1735287328c34770f5deae2eed35736a1909179aa55adb6021",
+      "concept": "A curved route passing through checkpoints toward a forward destination."
+    },
+    {
+      "id": "compass-lane",
+      "name": "Compass Lane",
+      "source": "compass-lane.svg",
+      "sha256": "23a3af3a73666dcb24fe03a3383e4c2c65524d940792fc9ad8414c7e976815ac",
+      "concept": "A directional lane inside a navigational ring, emphasizing orientation and movement."
+    },
+    {
+      "id": "progress-meridian",
+      "name": "Progress Meridian",
+      "source": "progress-meridian.svg",
+      "sha256": "dc91781a702817d96fb8fc7fea99a35ad0a59617f430ab514feded7a93d7f318",
+      "concept": "Multiple progress paths converging on one destination, emphasizing coordination and completion."
+    }
+  ],
+  "approval": {
+    "required": true,
+    "approved_candidate": null,
+    "approved_source_sha256": null
+  }
+}
