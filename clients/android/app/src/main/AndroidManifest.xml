@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      No INTERNET permission is declared in this first native Development shell.
+      The read API is source-ready, but native GoreeCloud Identity/session exchange is not yet
+      accepted. Network authority is added only with the authenticated transport milestone.
+    -->
+    <application
+        android:allowBackup="false"
+        android:label="GoreeCloud Tasks"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
