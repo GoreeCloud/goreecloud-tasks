@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from labels.models import Label
 from projects.models import Project, ProjectMembership
 from tasks.models import Task
 
@@ -65,17 +66,35 @@ class NativeClientTaskAPITests(TestCase):
             status=Task.Status.COMPLETED,
             due_at=due - timedelta(days=1),
         )
-        Task.objects.create(
+        self.private_owner = Task.objects.create(
             creator=self.owner,
             project=self.private_project,
             title="Private owner task",
+            description="Private owner detail",
         )
-        Task.objects.create(
+        self.other_personal = Task.objects.create(
             creator=self.other,
             title="Other personal task",
+            description="Other user detail",
         )
 
+        self.personal_label = Label.objects.create(
+            name="Personal label",
+            owner=self.viewer,
+        )
+        self.shared_label = Label.objects.create(
+            name="Shared label",
+            owner=self.owner,
+            project=self.shared_project,
+        )
+        self.personal.labels.add(self.personal_label)
+        self.shared.labels.add(self.shared_label)
+
         self.url = reverse("api:client-tasks")
+
+    def detail_url(self, task: Task | int) -> str:
+        task_id = task if isinstance(task, int) else task.id
+        return reverse("api:client-task-detail", kwargs={"task_id": task_id})
 
     def test_unauthenticated_request_is_rejected(self):
         response = self.client.get(self.url)
@@ -107,6 +126,7 @@ class NativeClientTaskAPITests(TestCase):
         self.assertNotIn("Other personal task", serialized)
         self.assertNotIn("Completed personal task", serialized)
         self.assertNotIn("description", serialized)
+        self.assertNotIn("labels", serialized)
         self.assertNotIn("comments", serialized)
         self.assertNotIn("reminder", serialized)
 
@@ -187,3 +207,67 @@ class NativeClientTaskAPITests(TestCase):
         self.assertEqual(response.status_code, 405)
         self.assertEqual(response["Allow"], "GET")
         self.assertEqual(response["Cache-Control"], "private, no-store")
+
+    def test_detail_returns_visible_task_content_without_unrelated_private_state(self):
+        self.client.force_login(self.viewer)
+        response = self.client.get(self.detail_url(self.shared))
+        self.assertEqual(response.status_code, 200)
+
+        payload = response.json()
+        self.assertEqual(payload["schema"], "goreecloud.tasks.client-task-detail.v1")
+        self.assertEqual(payload["authorization"]["identity"], self.viewer.username)
+        self.assertEqual(payload["task"]["id"], self.shared.id)
+        self.assertEqual(payload["task"]["description"], "Shared sensitive description")
+        self.assertEqual(payload["task"]["creator"]["username"], self.owner.username)
+        self.assertEqual(payload["task"]["labels"], [{"id": self.shared_label.id, "name": "Shared label"}])
+        self.assertFalse(payload["task"]["editable"])
+
+        serialized = json.dumps(payload)
+        self.assertNotIn("Private owner detail", serialized)
+        self.assertNotIn("Other user detail", serialized)
+        self.assertNotIn("comments", serialized)
+        self.assertNotIn("reminder", serialized)
+        self.assertNotIn("notification", serialized)
+        self.assertNotIn("blocker", serialized)
+        self.assertNotIn("resume_condition", serialized)
+
+    def test_personal_detail_reports_current_editability_and_label(self):
+        self.client.force_login(self.viewer)
+        response = self.client.get(self.detail_url(self.personal))
+        self.assertEqual(response.status_code, 200)
+        task = response.json()["task"]
+        self.assertTrue(task["editable"])
+        self.assertEqual(task["creator"]["username"], self.viewer.username)
+        self.assertEqual(task["labels"], [{"id": self.personal_label.id, "name": "Personal label"}])
+
+    def test_hidden_and_missing_detail_identifiers_are_indistinguishable(self):
+        self.client.force_login(self.viewer)
+        hidden = self.client.get(self.detail_url(self.private_owner))
+        missing = self.client.get(self.detail_url(999999))
+
+        self.assertEqual(hidden.status_code, 404)
+        self.assertEqual(missing.status_code, 404)
+        self.assertEqual(hidden.json(), {"detail": "Not found."})
+        self.assertEqual(missing.json(), {"detail": "Not found."})
+        self.assertEqual(hidden["Cache-Control"], "private, no-store")
+        self.assertIn("Cookie", hidden["Vary"])
+
+    def test_membership_revocation_removes_detail_access_immediately(self):
+        self.client.force_login(self.viewer)
+        self.assertEqual(self.client.get(self.detail_url(self.shared)).status_code, 200)
+
+        self.membership.is_active = False
+        self.membership.save(update_fields=["is_active"])
+
+        response = self.client.get(self.detail_url(self.shared))
+        self.assertEqual(response.status_code, 404)
+
+    def test_detail_requires_authentication_and_is_get_only(self):
+        unauthenticated = self.client.get(self.detail_url(self.personal))
+        self.assertEqual(unauthenticated.status_code, 401)
+
+        self.client.force_login(self.viewer)
+        post = self.client.post(self.detail_url(self.personal), data={})
+        self.assertEqual(post.status_code, 405)
+        self.assertEqual(post["Allow"], "GET")
+        self.assertEqual(post["Cache-Control"], "private, no-store")
