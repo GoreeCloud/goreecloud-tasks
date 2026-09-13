@@ -15,7 +15,8 @@ from django.utils import timezone
 
 from tasks.models import Task
 
-SCHEMA = "goreecloud.tasks.client-task-list.v1"
+LIST_SCHEMA = "goreecloud.tasks.client-task-list.v1"
+DETAIL_SCHEMA = "goreecloud.tasks.client-task-detail.v1"
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 200
 
@@ -25,6 +26,20 @@ def _private_json(payload: dict[str, object], *, status: int = 200) -> JsonRespo
     response["Cache-Control"] = "private, no-store"
     response["Vary"] = "Cookie"
     return response
+
+
+def _method_not_allowed() -> HttpResponseNotAllowed:
+    response = HttpResponseNotAllowed(["GET"])
+    response["Cache-Control"] = "private, no-store"
+    response["Vary"] = "Cookie"
+    return response
+
+
+def _identity_or_failure(request):
+    identity = request.user
+    if not identity.is_authenticated or not identity.is_active:
+        return None, _private_json({"detail": "Authentication required."}, status=401)
+    return identity, None
 
 
 def _bad_request(detail: str) -> JsonResponse:
@@ -90,6 +105,24 @@ def _serialize_task(task: Task, *, editable: bool) -> dict[str, object]:
     }
 
 
+def _serialize_task_detail(task: Task, *, editable: bool) -> dict[str, object]:
+    detail = _serialize_task(task, editable=editable)
+    detail.update(
+        {
+            "description": task.description,
+            "creator": {
+                "id": task.creator_id,
+                "username": task.creator.username,
+            },
+            "labels": [
+                {"id": label.id, "name": label.name}
+                for label in task.labels.all()
+            ],
+        }
+    )
+    return detail
+
+
 def client_tasks(request):
     """List tasks visible to the currently authenticated GoreeCloud user.
 
@@ -110,14 +143,11 @@ def client_tasks(request):
     """
 
     if request.method != "GET":
-        response = HttpResponseNotAllowed(["GET"])
-        response["Cache-Control"] = "private, no-store"
-        response["Vary"] = "Cookie"
-        return response
+        return _method_not_allowed()
 
-    identity = request.user
-    if not identity.is_authenticated or not identity.is_active:
-        return _private_json({"detail": "Authentication required."}, status=401)
+    identity, failure = _identity_or_failure(request)
+    if failure is not None:
+        return failure
 
     state = request.GET.get("state", "active")
     if state not in {"active", "completed", "all"}:
@@ -160,7 +190,7 @@ def client_tasks(request):
 
     return _private_json(
         {
-            "schema": SCHEMA,
+            "schema": LIST_SCHEMA,
             "version": 1,
             "generated_at": timezone.now().isoformat(),
             "authorization": {
@@ -178,5 +208,46 @@ def client_tasks(request):
                 _serialize_task(task, editable=task.id in editable_ids)
                 for task in tasks
             ],
+        }
+    )
+
+
+def client_task_detail(request, task_id: int):
+    """Return one visible task through a separately minimized detail schema.
+
+    Hidden or nonexistent task identifiers both return 404 so the native surface
+    cannot use this endpoint to probe task existence outside the caller's normal
+    authorization scope. Comments, activity, reminder state, notification state,
+    operational metadata, and portability/recovery records remain excluded.
+    """
+
+    if request.method != "GET":
+        return _method_not_allowed()
+
+    identity, failure = _identity_or_failure(request)
+    if failure is not None:
+        return failure
+
+    task = (
+        Task.objects.visible_to(identity)
+        .filter(pk=task_id)
+        .select_related("project", "creator", "assignee")
+        .prefetch_related("labels")
+        .first()
+    )
+    if task is None:
+        return _private_json({"detail": "Not found."}, status=404)
+
+    editable = Task.objects.editable_by(identity).filter(pk=task.pk).exists()
+    return _private_json(
+        {
+            "schema": DETAIL_SCHEMA,
+            "version": 1,
+            "generated_at": timezone.now().isoformat(),
+            "authorization": {
+                "identity": identity.username,
+                "scope": "one task visible to the authenticated GoreeCloud user",
+            },
+            "task": _serialize_task_detail(task, editable=editable),
         }
     )
