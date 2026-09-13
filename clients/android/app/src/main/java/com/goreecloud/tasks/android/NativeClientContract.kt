@@ -13,6 +13,7 @@ enum class NativeCapabilityState {
 data class NativeClientCapabilitySnapshot(
     val readApiContract: NativeCapabilityState,
     val glazeUiV14: NativeCapabilityState,
+    val identityAcceptanceProofContract: NativeCapabilityState,
     val identitySessionExchange: NativeCapabilityState,
     val remoteListRead: NativeCapabilityState,
     val remoteDetailRead: NativeCapabilityState,
@@ -67,6 +68,10 @@ object TasksNativeClientContract {
     const val GLAZE_UI_VERSION = "1.4.0"
     const val GLAZE_UI_REFERENCE_REVISION = "84cb3db4884042f0fa25ed6d475a127fb110f596"
 
+    const val IDENTITY_NATIVE_SESSION_SCHEMA = "goreecloud.identity.native-application-session/v1"
+    const val IDENTITY_CONTRACT_CANDIDATE_REVISION =
+        "62ad109809f2e479cf71a6327ffd0d4537a6b3df"
+
     fun taskDetailPath(taskId: Long): String {
         require(taskId > 0) { "taskId must be positive" }
         return "/api/v1/client/tasks/$taskId/"
@@ -75,6 +80,7 @@ object TasksNativeClientContract {
     fun capabilitySnapshot(): NativeClientCapabilitySnapshot = NativeClientCapabilitySnapshot(
         readApiContract = NativeCapabilityState.SOURCE_READY,
         glazeUiV14 = NativeCapabilityState.ADOPTION_IN_PROGRESS,
+        identityAcceptanceProofContract = NativeCapabilityState.SOURCE_READY,
         identitySessionExchange = NativeCapabilityState.BLOCKED,
         remoteListRead = NativeCapabilityState.BLOCKED,
         remoteDetailRead = NativeCapabilityState.BLOCKED,

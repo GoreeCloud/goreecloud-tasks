@@ -14,9 +14,20 @@ The Android module currently provides:
 - a compilable first-party Compose application;
 - pure Kotlin construction and validation for the accepted native list/detail endpoint family;
 - client-side enforcement of the documented `state`, `status`, `project`, and `limit` bounds;
-- a truthful capability surface that distinguishes source-ready API contracts from blocked/not-implemented runtime features;
+- a truthful capability surface that distinguishes source-ready API/Identity contracts from blocked/not-implemented runtime features;
+- a pure fail-closed Identity acceptance-proof policy for exact principal/audience/lifetime metadata;
 - a repository-local Android adaptation target for current Stable GLAZE UI V1.4 / `1.4.0`;
 - unit coverage preventing the shell from advertising identity, remote reads, cache, mutation, or background sync as available.
+
+## GoreeCloud Identity source-contract boundary
+
+The Tasks client now aligns its non-secret acceptance metadata with GoreeCloud Identity schema `goreecloud.identity.native-application-session/v1`, pinned to Development candidate revision `62ad109809f2e479cf71a6327ffd0d4537a6b3df`.
+
+That Identity candidate currently defines the common proof metadata as exact `principalId`, exact registered audience, `issuedAt`, and exclusive `expiresAt`, with no string normalization, no future-issued proof acceptance, and independent consumer acceptance. Tasks uses the Development consumer audience `goreecloud-tasks-android` as a local expectation only; this does **not** claim that a production Identity application registration or accepted runtime exists.
+
+A successful local `TasksIdentityBindingPolicy` decision means only that supplied non-secret metadata is internally consistent with the expected principal, audience, and lifetime. It is not a bearer credential, does not authenticate a user by itself, and cannot bypass the server's existing `visible_to(user)` or `editable_by(user)` authorization rules.
+
+The Identity proof contract is therefore `SOURCE_READY`, while the actual native Identity/session exchange remains `BLOCKED`.
 
 ## Deliberate restrictions
 
@@ -32,7 +43,7 @@ The application targets current Stable GLAZE UI V1.4 from the beginning. Reading
 
 ## Next implementation order
 
-1. Define and accept GoreeCloud Identity/session exchange for first-party native clients.
+1. Implement and accept the GoreeCloud Identity native session/runtime that can produce the canonical proof metadata for a registered Tasks audience.
 2. Add authenticated read-only network transport with private/no-store semantics preserved end to end.
 3. Parse and render list/detail schemas without broadening server authorization.
 4. Add protected local caching only with revocation and incremental-sync behavior defined.
