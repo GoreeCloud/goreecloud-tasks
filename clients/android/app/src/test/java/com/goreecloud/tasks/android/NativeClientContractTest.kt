@@ -44,10 +44,14 @@ class NativeClientContractTest {
     }
 
     @Test
-    fun developmentCapabilitiesDoNotAdvertiseUnavailableRuntimeAuthority() {
+    fun developmentCapabilitiesSeparateProofContractFromRuntimeAuthority() {
         val snapshot = TasksNativeClientContract.capabilitySnapshot()
         assertEquals(NativeCapabilityState.SOURCE_READY, snapshot.readApiContract)
         assertEquals(NativeCapabilityState.ADOPTION_IN_PROGRESS, snapshot.glazeUiV14)
+        assertEquals(
+            NativeCapabilityState.SOURCE_READY,
+            snapshot.identityAcceptanceProofContract,
+        )
         assertEquals(NativeCapabilityState.BLOCKED, snapshot.identitySessionExchange)
         assertEquals(NativeCapabilityState.BLOCKED, snapshot.remoteListRead)
         assertEquals(NativeCapabilityState.BLOCKED, snapshot.remoteDetailRead)
@@ -55,7 +59,7 @@ class NativeClientContractTest {
         assertEquals(NativeCapabilityState.NOT_IMPLEMENTED, snapshot.mutations)
         assertEquals(NativeCapabilityState.NOT_IMPLEMENTED, snapshot.backgroundSync)
 
-        val states = listOf(
+        val runtimeStates = listOf(
             snapshot.identitySessionExchange,
             snapshot.remoteListRead,
             snapshot.remoteDetailRead,
@@ -63,7 +67,12 @@ class NativeClientContractTest {
             snapshot.mutations,
             snapshot.backgroundSync,
         )
-        assertFalse(states.contains(NativeCapabilityState.SOURCE_READY))
+        assertFalse(runtimeStates.contains(NativeCapabilityState.SOURCE_READY))
+        assertEquals(
+            "goreecloud.identity.native-application-session/v1",
+            TasksNativeClientContract.IDENTITY_NATIVE_SESSION_SCHEMA,
+        )
+        assertTrue(TasksNativeClientContract.IDENTITY_CONTRACT_CANDIDATE_REVISION.length == 40)
         assertTrue(TasksNativeClientContract.GLAZE_UI_REFERENCE_REVISION.length == 40)
     }
 
