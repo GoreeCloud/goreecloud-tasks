@@ -6,11 +6,13 @@ on:
     paths:
       - 'clients/android/**'
       - 'docs/glaze-ui-v1.4-android-adoption.md'
+      - 'scripts/validate_android_native_foundation.py'
       - '.github/workflows/android-client.yml'
   pull_request:
     paths:
       - 'clients/android/**'
       - 'docs/glaze-ui-v1.4-android-adoption.md'
+      - 'scripts/validate_android_native_foundation.py'
       - '.github/workflows/android-client.yml'
 
 permissions:
@@ -31,6 +33,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
+      - name: Validate native authority boundary
+        working-directory: .
+        run: python3 scripts/validate_android_native_foundation.py
       - name: Unit tests
         run: gradle :app:testDebugUnitTest --stacktrace
       - name: Assemble debug
