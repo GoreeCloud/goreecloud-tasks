@@ -6,13 +6,19 @@
     "approval_reference": null,
     "approved_at": null
   },
-  "declared_effective_check_count": 15,
+  "declared_effective_check_count": 16,
   "source_evidence_gates": [
     {
       "workflow_path": ".github/workflows/ci.yml",
       "workflow_name": "CI",
       "required_jobs": ["django", "ntfy-integration", "manager-cross-app", "manager-final-topology", "backup-restore", "upgrade-rollback", "docker-compose"],
       "evidence_scope": "application, authorization, integration, topology, backup/restore, upgrade/rollback, and container startup"
+    },
+    {
+      "workflow_path": ".github/workflows/android-client.yml",
+      "workflow_name": "Android Client CI",
+      "required_jobs": ["build-test"],
+      "evidence_scope": "Development Android native authority-boundary validation, JVM unit tests, and debug APK source/build evidence; not target-environment or production acceptance"
     },
     {
       "workflow_path": ".github/workflows/runtime-security-preflight.yml",
