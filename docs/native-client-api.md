@@ -6,7 +6,7 @@
 
 ## Purpose
 
-This API is the first bounded application contract intended to support future first-party Android and Linux GoreeCloud Tasks clients.
+This API is the first bounded application contract intended to support first-party Android and Linux GoreeCloud Tasks clients.
 
 The native client must remain a client of the existing GoreeCloud Tasks authorization and data model. It must not create a separate authoritative task database or bypass project membership, task visibility, editability, recurrence, assignment, collaboration, or recovery rules.
 
@@ -15,6 +15,8 @@ The native client must remain a client of the existing GoreeCloud Tasks authoriz
 Both initial endpoints use the currently authenticated GoreeCloud Tasks user session and recalculate authorization on every request through `Task.objects.visible_to(user)`. Per-task editability is derived through `Task.objects.editable_by(user)`.
 
 This Development tranche deliberately does **not** introduce a mobile bearer-token database, device credential format, refresh-token protocol, GoreeCloud Identity acceptance claim, or background synchronization authority. Those are separate security and runtime milestones.
+
+The first Android client foundation now exists under `clients/android/`, but it intentionally does not declare network authority. It models and validates the accepted API paths locally while keeping remote list/detail reads blocked until a native GoreeCloud Identity/session exchange is defined and accepted. It does not copy browser cookies, embed reusable application-wide credentials, or invent a second authentication model.
 
 ## Task list
 
@@ -63,16 +65,29 @@ Responses use `Cache-Control: private, no-store` and vary on the authenticated s
 
 Authorization remains dynamic. A project-membership revocation removes both list and detail access to the associated shared task on subsequent requests. Project filters cannot reveal a project the user otherwise cannot read.
 
+## Android client foundation
+
+The first Android Development client is intentionally bounded:
+
+- it targets the current Stable GLAZE UI V1.4 / `1.4.0` contract and records adoption as in progress rather than accepted conformance;
+- it constructs only the documented native list/detail endpoint family and validates client-side filter bounds before transport;
+- it does not currently hold network authority;
+- it does not hold or synthesize native identity/session credentials;
+- it does not create a parallel authoritative task database;
+- it does not implement local cache, mutation queues, background sync, notifications, reminders, or widgets;
+- its UI surfaces these boundaries explicitly instead of representing unavailable capabilities as accepted.
+
 ## Follow-on milestones
 
 1. Define GoreeCloud Identity/session exchange for native clients without reusable application-wide credentials.
-2. Add conditional mutation APIs using the existing editability rules plus explicit conflict/version semantics.
-3. Add incremental synchronization cursors and bounded local-cache reconciliation.
-4. Add notification/reminder registration without exposing another user's notification state.
-5. Establish offline mutation queues only after conflict, revocation, and recovery behavior is defined and tested.
-6. Build the Android client against these accepted APIs.
-7. Add representative-device, accessibility, background-work, Wardveil, Privacy Shield, Everkeep, signing/provenance, and release acceptance.
+2. Add authenticated read-only Android transport while preserving server authorization and private/no-store behavior.
+3. Parse and render the accepted list/detail schemas on Android without broadening authorization.
+4. Add conditional mutation APIs using the existing editability rules plus explicit conflict/version semantics.
+5. Add incremental synchronization cursors and bounded local-cache reconciliation.
+6. Add notification/reminder registration without exposing another user's notification state.
+7. Establish offline mutation queues only after conflict, revocation, and recovery behavior is defined and tested.
+8. Add representative-device, accessibility, background-work, Wardveil, Privacy Shield, Everkeep, signing/provenance, and release acceptance.
 
 ## Acceptance boundary
 
-These read-only endpoints are source-level Development evidence only. They do not establish production publication, GoreeCloud Identity acceptance, Android client acceptance, background synchronization, offline write authority, Privacy Shield acceptance, Wardveil acceptance, Everkeep recovery acceptance, Release Candidate status, or Stable status.
+The read-only server endpoints and first Android shell are Development evidence only. They do not establish production publication, GoreeCloud Identity acceptance, authenticated Android remote reads, background synchronization, offline write authority, GLAZE UI consumer conformance, Privacy Shield acceptance, Wardveil acceptance, Everkeep recovery acceptance, Release Candidate status, or Stable status.
