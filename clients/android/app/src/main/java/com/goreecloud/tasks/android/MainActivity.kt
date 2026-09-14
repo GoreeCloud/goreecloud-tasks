@@ -47,7 +47,8 @@ private data class CapabilityRow(
 private fun TasksDevelopmentScreen() {
     val snapshot = TasksNativeClientContract.capabilitySnapshot()
     val rows = listOf(
-        CapabilityRow("Native read API contract", snapshot.readApiContract, "List and detail schemas are source-ready."),
+        CapabilityRow("Native read API contract", snapshot.readApiContract, "List and detail request schemas are source-ready."),
+        CapabilityRow("Native response acceptance", snapshot.responseAcceptanceContract, "List/detail response invariants and exact field allowlists are source-ready; no transport is enabled."),
         CapabilityRow("Glaze UI V1.4", snapshot.glazeUiV14, "Targeting 1.4.0; native conformance evidence is not accepted yet."),
         CapabilityRow("Identity session exchange", snapshot.identitySessionExchange, "Required before native authenticated transport is enabled."),
         CapabilityRow("Remote task list", snapshot.remoteListRead, "Blocked until Identity/session exchange and transport are accepted."),
@@ -95,7 +96,7 @@ private fun TasksDevelopmentScreen() {
                     ) {
                         Text("Current boundary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "The read API contract is ready, but this APK intentionally has no network permission. Native GoreeCloud Identity/session exchange must be defined and accepted before remote task data can be requested.",
+                            "Native request and response contracts are source-ready, but this APK intentionally has no network permission. Native GoreeCloud Identity/session exchange must be defined and accepted before remote task data can be requested.",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Spacer(Modifier.height(2.dp))
