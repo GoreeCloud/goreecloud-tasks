@@ -6,7 +6,7 @@ Small, technically necessary foundational dependencies remain permitted where in
 
 ## Integral Platform Systems
 
-Current GoreeCloud Platform Contract 0.3 conformance evaluates all eight Integral Platform Systems:
+Current GoreeCloud Platform Contract 0.3 conformance evaluates the seven Integral Platform Systems:
 
 1. GoreeCloud Manager
 2. Privacy Shield
@@ -15,11 +15,12 @@ Current GoreeCloud Platform Contract 0.3 conformance evaluates all eight Integra
 5. GLAZE UI
 6. GoreeCloud Mesh
 7. GoreeCloud Identity
-8. GoreeCloud Sync
 
-Every system must be evaluated under the canonical repository-root `goreecloud.platform.yaml` declaration. Platform Contract 0.3 uses the governed result vocabulary `applicable-conformant`, `applicable-migration-required`, `applicable-blocked`, `applicable-nonconformant`, and `not-applicable-justified`. A positive or non-applicable result requires the evidence and justification required by the central contract; missing implementation must not be hidden behind a not-applicable classification.
+Every Integral Platform System must be evaluated under the canonical repository-root `goreecloud.platform.yaml` declaration. Platform Contract 0.3 uses the governed result vocabulary `applicable-conformant`, `applicable-migration-required`, `applicable-blocked`, `applicable-nonconformant`, and `not-applicable-justified`. A positive or non-applicable result requires the evidence and justification required by the central contract; missing implementation must not be hidden behind a not-applicable classification.
 
-Repository-local management, privacy, security, continuity, interface, coordination, identity, or synchronization behavior does not by itself establish acceptance by the corresponding Integral Platform System. Branding, prose, a badge, source implementation, or intended future integration cannot substitute for producer-system contracts and acceptance evidence.
+Repository-local management, privacy, security, continuity, interface, coordination, or identity behavior does not by itself establish acceptance by the corresponding Integral Platform System. Branding, prose, a badge, source implementation, or intended future integration cannot substitute for producer-system contracts and acceptance evidence.
+
+GoreeCloud Sync remains a separately governed application/service capability where applicable. Its requirements and blockers must remain explicit without representing Sync as an eighth Integral Platform System.
 
 ## Current GLAZE UI gating
 
@@ -37,7 +38,7 @@ No release or service state may be classified or retained as Stable unless nativ
 
 The Android Identity acceptance-proof seam is source-ready only. It does not establish deployed native application registration, credential exchange, protected credential storage, session runtime, server-side Identity migration, or production Identity acceptance.
 
-GoreeCloud Sync is an independent Platform System. It must not be inferred from the Django data model, Calendar integration, offline cache plans, background work, or Everkeep backup/recovery. Accepted change tracking, version coordination, authorized replication, conflict reconciliation, offline resume, and cross-device continuity remain blocked.
+GoreeCloud Sync is a separately governed application/service capability, not an Integral Platform System. It must not be inferred from the Django data model, Calendar integration, offline cache plans, background work, or Everkeep backup/recovery. Accepted change tracking, version coordination, authorized replication, conflict reconciliation, offline resume, and cross-device continuity remain blocked.
 
 ## Evidence and production boundary
 

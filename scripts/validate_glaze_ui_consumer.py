@@ -103,7 +103,11 @@ def main() -> None:
         "existing web application still carries older repository-local Glaze mapping/evidence" in platform,
         "Platform Contract must preserve the mixed web/Android GLAZE UI boundary",
     )
-    require("  sync:\n    result: applicable-blocked" in platform, "Platform Contract must declare GoreeCloud Sync independently blocked")
+    require("\n  sync:\n" not in platform, "GoreeCloud Sync must not be represented as an eighth Integral Platform System")
+    require(
+        "GoreeCloud Sync change tracking, authorized replication, version/conflict reconciliation" in platform,
+        "Platform Contract must preserve the separate blocked GoreeCloud Sync capability",
+    )
 
     require("GLAZE UI V1.4 / 1.4.0" in android_theme, "Android theme must identify the current V1.4 target")
     require(
@@ -123,12 +127,12 @@ def main() -> None:
         "platform conformance must identify the current Contract 0.3 GLAZE UI baseline",
     )
     require(
-        "all eight Integral Platform Systems" in conformance,
-        "platform conformance must identify the eight-system Contract 0.3 model",
+        "seven Integral Platform Systems" in conformance,
+        "platform conformance must identify the seven-system Contract 0.3 model",
     )
     require(
-        "GoreeCloud Sync is an independent Platform System." in conformance,
-        "platform conformance must keep Sync distinct from backup, cache, and integration behavior",
+        "GoreeCloud Sync is a separately governed application/service capability, not an Integral Platform System." in conformance,
+        "platform conformance must keep Sync separate from the seven Integral Platform Systems",
     )
 
     # The compatibility layer remains local and last so product CSS cannot silently override it.
@@ -247,7 +251,8 @@ def main() -> None:
         "GoreeCloud Tasks GLAZE UI mixed-surface source contract validated: "
         f"web implementation {WEB_TARGET_VERSION} at {WEB_GLAZE_SOURCE_REVISION}; "
         f"Android target {PLATFORM_REQUIRED_VERSION} at {ANDROID_GLAZE_SOURCE_REVISION}; "
-        "Platform Contract 0.3 migration-required; rendered, application acceptance, V1.4.1, "
+        "Platform Contract 0.3 migration-required under seven-system governance; "
+        "GoreeCloud Sync remains separately blocked; rendered, application acceptance, V1.4.1, "
         "release, and production gates remain separate"
     )
 

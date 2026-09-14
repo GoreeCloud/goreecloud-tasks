@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   validate:
-    # Temporary exact pin to central PR #30 until its V1.4 baseline lands on main.
-    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@5e10d17f10a4c12cc0a98b595646e4fc5992c1f2
+    # Temporary exact pin to corrected central PR #30 until its seven-system V1.4 baseline lands on main.
+    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@96701cc5f20c8e0deaad512d2a9f83e0411f3f18
     with:
       manifest-path: goreecloud.platform.yaml
