@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed source validation for the GoreeCloud Tasks GLAZE UI V1.0 migration under Platform Contract v0.2."""
+"""Fail-closed source validation for Tasks mixed-surface GLAZE UI adoption under Platform Contract 0.3."""
 
 from __future__ import annotations
 
@@ -7,14 +7,15 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET_VERSION = "1.0.0"
-PLATFORM_REQUIRED_VERSION = "1.1.0"
-GLAZE_SOURCE_REVISION = "70909bbdccad378fb7281ae1842e2f5beed64c38"
+WEB_TARGET_VERSION = "1.0.0"
+PLATFORM_REQUIRED_VERSION = "1.4.0"
+WEB_GLAZE_SOURCE_REVISION = "70909bbdccad378fb7281ae1842e2f5beed64c38"
+ANDROID_GLAZE_SOURCE_REVISION = "84cb3db4884042f0fa25ed6d475a127fb110f596"
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
-        raise SystemExit(f"Tasks GLAZE UI V1.0 source validation failed: {message}")
+        raise SystemExit(f"Tasks GLAZE UI mixed-surface source validation failed: {message}")
 
 
 def read(path: str) -> str:
@@ -31,12 +32,15 @@ def main() -> None:
     conformance = read("docs/PLATFORM_CONFORMANCE.md")
     rendered = read("scripts/validate_glaze_ui_rendered.py")
     workflow = read(".github/workflows/ci.yml")
+    android_theme = read(
+        "clients/android/app/src/main/java/com/goreecloud/tasks/android/GlazeTasksTheme.kt"
+    )
 
-    # Exact V1 implementation identity and fail-closed downstream lifecycle boundary.
-    require(f'data-glaze-ui="{TARGET_VERSION}"' in base, "base template must declare GLAZE UI V1.0")
+    # Exact web V1 implementation identity and fail-closed downstream lifecycle boundary.
+    require(f'data-glaze-ui="{WEB_TARGET_VERSION}"' in base, "base template must declare web GLAZE UI V1.0")
     require(
-        f'data-glaze-source-revision="{GLAZE_SOURCE_REVISION}"' in base,
-        "base template must pin the exact canonical V1 source revision",
+        f'data-glaze-source-revision="{WEB_GLAZE_SOURCE_REVISION}"' in base,
+        "base template must pin the exact canonical web V1 source revision",
     )
     require(
         'data-glaze-consumer-status="migration-in-progress"' in base,
@@ -53,15 +57,15 @@ def main() -> None:
     require('data-glz-surface="system-overlay"' in base, "System Overlay classification is missing")
 
     contract_plain = contract.replace("**", "")
-    require("GLAZE UI V1.0 (`1.0.0`)" in contract, "consumer contract target version is missing")
-    require(GLAZE_SOURCE_REVISION in contract, "consumer contract must record the exact V1 source revision")
+    require("GLAZE UI V1.0 (`1.0.0`)" in contract, "web consumer contract target version is missing")
+    require(WEB_GLAZE_SOURCE_REVISION in contract, "web consumer contract must record the exact V1 source revision")
     require("Official reset baseline; production acceptance pending" in contract, "upstream reset lifecycle boundary is missing")
     require("Migration in progress" in contract, "downstream migration boundary is missing")
     require("does not establish production acceptance" in contract_plain, "production-acceptance non-claim is missing")
     require("not a retired Glaze product version" in contract, "rollback must use an exact Tasks revision, not a retired Glaze version")
 
-    # Current controlled records must preserve the implemented V1 identity while
-    # representing the current Platform Contract baseline separately.
+    # Current controlled records must preserve the historical web V1 identity while
+    # separately representing Android V1.4 and current Platform Contract 0.3 authority.
     active_records = {
         "base template": base,
         "consumer contract": contract,
@@ -69,35 +73,62 @@ def main() -> None:
         "platform conformance": conformance,
         "consumer CSS": glaze,
         "rendered validator": rendered,
+        "Android theme": android_theme,
     }
     for name, content in active_records.items():
         require("Glaze UI 2.2" not in content and "GLAZE UI 2.2" not in content, f"{name} retains retired 2.2 identity")
         require('data-glaze-ui="1.3.0"' not in content, f"{name} retains retired 1.3 active marker")
 
     require(
-        re.search(r"^\s*version:\s*['\"]?1\.0\.0['\"]?\s*$", platform, re.MULTILINE) is not None,
-        "Platform Contract must record the implemented V1 version",
+        'schema_version: "0.3"' in platform or "schema_version: '0.3'" in platform,
+        "Platform Contract must use schema 0.3",
     )
-    require("schema_version: '0.2'" in platform or 'schema_version: "0.2"' in platform, "Platform Contract must use schema v0.2")
-    require("platform_contract: '0.2'" in platform or 'platform_contract: "0.2"' in platform, "Platform compatibility must use contract v0.2")
     require(
-        re.search(r"^\s*glaze_ui_required:\s*['\"]?1\.1\.0['\"]?\s*$", platform, re.MULTILINE) is not None,
-        "Platform Contract must record the current central Glaze UI baseline",
+        'platform_contract: "0.3"' in platform or "platform_contract: '0.3'" in platform,
+        "Platform compatibility must use contract 0.3",
     )
-    require("glaze-ui==1.1.0" in platform, "Platform compatibility must require the current central Glaze UI baseline")
-    require("result: applicable-migration-required" in platform, "Platform Contract must keep the implemented V1 consumer in migration-required state")
+    require(
+        re.search(r"^\s*glaze_ui_required:\s*['\"]?1\.4\.0['\"]?\s*$", platform, re.MULTILINE) is not None,
+        "Platform Contract must record current Stable GLAZE UI 1.4.0",
+    )
+    require("glaze-ui==1.4.0" in platform, "Platform compatibility must require current Stable GLAZE UI 1.4.0")
+    require(
+        re.search(r"^\s*version:\s*['\"]?1\.4\.0['\"]?\s*$", platform, re.MULTILINE) is not None,
+        "Platform GLAZE UI system entry must record the current Android target version",
+    )
+    require("result: applicable-migration-required" in platform, "Platform Contract must keep repository-wide GLAZE UI migration-required")
     require("status: nonconformant" in platform, "Platform Contract must remain nonconformant")
+    require(ANDROID_GLAZE_SOURCE_REVISION in platform, "Platform Contract must record the exact Android V1.4 Stable revision")
     require(
-        "Migration and exact-head application acceptance against the current Platform Contract Glaze UI baseline remain incomplete." in platform,
-        "Platform Contract must preserve the current migration and application-acceptance boundary",
+        "existing web application still carries older repository-local Glaze mapping/evidence" in platform,
+        "Platform Contract must preserve the mixed web/Android GLAZE UI boundary",
+    )
+    require("  sync:\n    result: applicable-blocked" in platform, "Platform Contract must declare GoreeCloud Sync independently blocked")
+
+    require("GLAZE UI V1.4 / 1.4.0" in android_theme, "Android theme must identify the current V1.4 target")
+    require(
+        "does not claim native Optical Engine acceptance" in android_theme,
+        "Android theme must preserve the V1.4 optical-acceptance non-claim",
     )
     require(
-        "GoreeCloud Tasks currently implements the repository-local GLAZE UI V1.0 (`1.0.0`) migration baseline." in conformance,
-        "platform conformance record must distinguish implemented V1 from the current required baseline",
+        "The existing web application still implements the repository-local GLAZE UI V1.0 (`1.0.0`) migration baseline." in conformance,
+        "platform conformance must preserve the implemented web V1 source truth",
     )
     require(
-        f"current GoreeCloud Platform Contract v0.2 consumer requirement is Glaze UI `{PLATFORM_REQUIRED_VERSION}`" in conformance,
-        "platform conformance record must identify the current required Glaze UI baseline",
+        "The native Android Development client targets current Stable GLAZE UI V1.4 (`1.4.0`)" in conformance,
+        "platform conformance must record Android V1.4 source adoption",
+    )
+    require(
+        "The current GoreeCloud Platform Contract 0.3 consumer requirement is GLAZE UI `1.4.0`." in conformance,
+        "platform conformance must identify the current Contract 0.3 GLAZE UI baseline",
+    )
+    require(
+        "all eight Integral Platform Systems" in conformance,
+        "platform conformance must identify the eight-system Contract 0.3 model",
+    )
+    require(
+        "GoreeCloud Sync is an independent Platform System." in conformance,
+        "platform conformance must keep Sync distinct from backup, cache, and integration behavior",
     )
 
     # The compatibility layer remains local and last so product CSS cannot silently override it.
@@ -106,10 +137,10 @@ def main() -> None:
     require(css_links[-1] == "glaze.css", "glaze.css must load after product-specific styles")
     require('<meta name="color-scheme" content="light dark">' in base, "light/dark color-scheme metadata is missing")
 
-    # Exact source provenance and canonical glz1 semantic namespace.
+    # Exact source provenance and canonical glz1 semantic namespace for the current web implementation.
     required_token_markers = (
         '--tasks-glaze-version: "1.0.0"',
-        f'--tasks-glaze-source-revision: "{GLAZE_SOURCE_REVISION}"',
+        f'--tasks-glaze-source-revision: "{WEB_GLAZE_SOURCE_REVISION}"',
         "--glz1-canvas: #f5f7fa",
         "--glz1-canvas: #0b0d11",
         "--glz1-base: #ffffff",
@@ -124,7 +155,7 @@ def main() -> None:
         "--glz1-panel-blur: 28px",
     )
     for marker in required_token_markers:
-        require(marker in glaze, f"missing V1 semantic marker: {marker}")
+        require(marker in glaze, f"missing web V1 semantic marker: {marker}")
 
     for marker in (
         "System Overlay navigation chrome",
@@ -146,7 +177,7 @@ def main() -> None:
         "@media (forced-colors: active)",
         "::selection",
     ):
-        require(marker in glaze, f"missing V1 material/adaptive/resilience contract: {marker}")
+        require(marker in glaze, f"missing web V1 material/adaptive/resilience contract: {marker}")
 
     require("min-block-size: var(--glz1-target-shell);" in glaze, "48px V1 target enforcement is missing")
     require(
@@ -165,7 +196,7 @@ def main() -> None:
     require("animation-duration: 0.01ms !important" in glaze, "reduced-motion animation suppression is missing")
     require("forced-color-adjust: none" in glaze, "forced-colors selected-state protection is missing")
 
-    # Rendered acceptance must exercise representative real Django surfaces and V1 modes.
+    # Rendered acceptance continues to exercise representative real Django web surfaces and V1 modes.
     for marker in (
         '"dashboard"',
         '"task-detail"',
@@ -188,7 +219,7 @@ def main() -> None:
         "root.dataset.glzTransparency='reduced'",
         "root.dataset.mode='increased-contrast'",
     ):
-        require(marker in rendered, f"rendered acceptance missing required V1 coverage marker: {marker}")
+        require(marker in rendered, f"rendered acceptance missing required web V1 coverage marker: {marker}")
 
     # CI validates the exact candidate SHA, not GitHub's synthetic merge ref.
     require("Validate Glaze UI consumer source contract" in workflow, "CI is missing source-level Glaze validation")
@@ -213,9 +244,10 @@ def main() -> None:
         require(forbidden not in lowered, f"forbidden presentation/dependency marker in glaze.css: {forbidden}")
 
     print(
-        "GoreeCloud Tasks GLAZE UI V1.0 source contract validated: "
-        f"implemented {TARGET_VERSION}, current Platform Contract requirement {PLATFORM_REQUIRED_VERSION}, "
-        f"source {GLAZE_SOURCE_REVISION}, migration in progress; rendered, application acceptance, "
+        "GoreeCloud Tasks GLAZE UI mixed-surface source contract validated: "
+        f"web implementation {WEB_TARGET_VERSION} at {WEB_GLAZE_SOURCE_REVISION}; "
+        f"Android target {PLATFORM_REQUIRED_VERSION} at {ANDROID_GLAZE_SOURCE_REVISION}; "
+        "Platform Contract 0.3 migration-required; rendered, application acceptance, V1.4.1, "
         "release, and production gates remain separate"
     )
 
