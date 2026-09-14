@@ -12,6 +12,7 @@ enum class NativeCapabilityState {
 
 data class NativeClientCapabilitySnapshot(
     val readApiContract: NativeCapabilityState,
+    val responseStructuralDecoder: NativeCapabilityState,
     val responseAcceptanceContract: NativeCapabilityState,
     val glazeUiV14: NativeCapabilityState,
     val identityAcceptanceProofContract: NativeCapabilityState,
@@ -80,6 +81,7 @@ object TasksNativeClientContract {
 
     fun capabilitySnapshot(): NativeClientCapabilitySnapshot = NativeClientCapabilitySnapshot(
         readApiContract = NativeCapabilityState.SOURCE_READY,
+        responseStructuralDecoder = NativeCapabilityState.SOURCE_READY,
         responseAcceptanceContract = NativeCapabilityState.SOURCE_READY,
         glazeUiV14 = NativeCapabilityState.ADOPTION_IN_PROGRESS,
         identityAcceptanceProofContract = NativeCapabilityState.SOURCE_READY,
