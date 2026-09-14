@@ -7,6 +7,7 @@ ANDROID = ROOT / "clients" / "android"
 MANIFEST = ANDROID / "app" / "src" / "main" / "AndroidManifest.xml"
 CONTRACT = ANDROID / "app" / "src" / "main" / "java" / "com" / "goreecloud" / "tasks" / "android" / "NativeClientContract.kt"
 RESPONSE_CONTRACT = ANDROID / "app" / "src" / "main" / "java" / "com" / "goreecloud" / "tasks" / "android" / "NativeTaskResponseContract.kt"
+STRUCTURAL_DECODER = ANDROID / "app" / "src" / "main" / "java" / "com" / "goreecloud" / "tasks" / "android" / "NativeTaskStructuralDecoder.kt"
 IDENTITY_BINDING = ANDROID / "app" / "src" / "main" / "java" / "com" / "goreecloud" / "tasks" / "android" / "TasksIdentityBinding.kt"
 README = ANDROID / "README.md"
 
@@ -33,6 +34,7 @@ def main() -> None:
     manifest = MANIFEST.read_text(encoding="utf-8")
     contract = CONTRACT.read_text(encoding="utf-8")
     response_contract = RESPONSE_CONTRACT.read_text(encoding="utf-8")
+    structural_decoder = STRUCTURAL_DECODER.read_text(encoding="utf-8")
     identity_binding = IDENTITY_BINDING.read_text(encoding="utf-8")
     readme = README.read_text(encoding="utf-8")
 
@@ -44,6 +46,7 @@ def main() -> None:
     require(contract, f'IDENTITY_NATIVE_SESSION_SCHEMA = "{EXPECTED_IDENTITY_SCHEMA}"', "contract")
     require(contract, EXPECTED_IDENTITY_CANDIDATE_REVISION, "contract")
     require(contract, 'readApiContract = NativeCapabilityState.SOURCE_READY', "contract")
+    require(contract, 'responseStructuralDecoder = NativeCapabilityState.SOURCE_READY', "contract")
     require(contract, 'responseAcceptanceContract = NativeCapabilityState.SOURCE_READY', "contract")
     require(
         contract,
@@ -74,6 +77,20 @@ def main() -> None:
     forbid(response_contract, 'HttpURLConnection', "response contract")
     forbid(response_contract, 'OkHttp', "response contract")
 
+    require(structural_decoder, 'object NativeTaskStructuralDecoder', "structural decoder")
+    require(structural_decoder, 'NativeTaskResponseContract.LIST_TOP_LEVEL_FIELDS', "structural decoder")
+    require(structural_decoder, 'NativeTaskResponseContract.DETAIL_TOP_LEVEL_FIELDS', "structural decoder")
+    require(structural_decoder, 'unknown fields:', "structural decoder")
+    require(structural_decoder, 'missing fields:', "structural decoder")
+    require(structural_decoder, 'expected integral number', "structural decoder")
+    require(structural_decoder, 'expected boolean', "structural decoder")
+    forbid(structural_decoder, 'JSONObject', "structural decoder")
+    forbid(structural_decoder, 'kotlinx.serialization', "structural decoder")
+    forbid(structural_decoder, 'java.net.', "structural decoder")
+    forbid(structural_decoder, 'android.net.', "structural decoder")
+    forbid(structural_decoder, 'HttpURLConnection', "structural decoder")
+    forbid(structural_decoder, 'OkHttp', "structural decoder")
+
     require(identity_binding, f'ANDROID_TASKS_AUDIENCE = "{EXPECTED_TASKS_AUDIENCE}"', "identity binding")
     require(identity_binding, "val principalId: String", "identity binding")
     require(identity_binding, "val audience: String", "identity binding")
@@ -92,6 +109,7 @@ def main() -> None:
     require(readme, EXPECTED_IDENTITY_CANDIDATE_REVISION, "README")
     require(readme, EXPECTED_LIST_SCHEMA, "README")
     require(readme, EXPECTED_DETAIL_SCHEMA, "README")
+    require(readme, "Native structural decoding", "README")
     require(readme, "Native response acceptance", "README")
     require(readme, "not** evidence that native V1.4 conformance has been accepted", "README")
 
@@ -100,8 +118,8 @@ def main() -> None:
         f"glaze={EXPECTED_GLAZE_VERSION}@{EXPECTED_GLAZE_REVISION} "
         f"identityContract={EXPECTED_IDENTITY_SCHEMA}@{EXPECTED_IDENTITY_CANDIDATE_REVISION} "
         f"responses={EXPECTED_LIST_SCHEMA},{EXPECTED_DETAIL_SCHEMA} "
-        "identityProof=source-ready responseAcceptance=source-ready internet=false "
-        "identitySession=false remoteReads=false production=false"
+        "identityProof=source-ready structuralDecoder=source-ready responseAcceptance=source-ready "
+        "internet=false identitySession=false remoteReads=false production=false"
     )
 
 
