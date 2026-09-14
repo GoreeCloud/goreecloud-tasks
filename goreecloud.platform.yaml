@@ -1,143 +1,213 @@
-schema_version: '0.2'
+schema_version: "0.3"
+
 component:
   type: application
   id: goreecloud-tasks
   product_name: GoreeCloud Tasks
   repository: GoreeCloud/goreecloud-tasks
+
 lifecycle: development
-version: '0.1'
+version: "0.1"
+
 supported_platforms:
-- web
-- linux-server
+  - web
+  - linux-server
+  - android
+
 api:
   versions:
-  - v1
+    - v1
   endpoints:
-  - name: health
-    url: /health/
-    purpose: Non-sensitive application liveness interface.
-  - name: manager-operational-tasks
-    url: /api/v1/manager/operational-tasks/
-    purpose: Read-only authorization-scoped operational task visibility for GoreeCloud Manager.
+    - name: health
+      url: /health/
+      purpose: Non-sensitive application liveness interface.
+    - name: manager-operational-tasks
+      url: /api/v1/manager/operational-tasks/
+      purpose: Read-only authorization-scoped operational task visibility for GoreeCloud Manager.
+    - name: native-task-list
+      url: /api/v1/client/tasks/
+      purpose: Authorization-scoped read-only native-client task list contract.
+    - name: native-task-detail
+      url: /api/v1/client/tasks/{task-id}/
+      purpose: Authorization-scoped minimized native-client task detail contract.
+
 platform_systems:
   manager:
     result: applicable-migration-required
     version: null
     evidence:
-    - docs/manager-api.md
-    - docs/manager-cross-application-validation.md
-    - docs/manager-final-topology-validation.md
-    - docs/manager-integration-credential-lifecycle.md
+      - docs/manager-api.md
+      - docs/manager-cross-application-validation.md
+      - docs/manager-final-topology-validation.md
+      - docs/manager-integration-credential-lifecycle.md
     notes: A source-level read-only Manager integration and dedicated validation exist, but canonical Mesh-backed platform registration, current-contract mapping, and production Manager integration acceptance remain incomplete.
+
   privacy_shield:
     result: applicable-blocked
     version: null
-    evidence: []
-    notes: Tasks implements privacy-first authorization and data-minimization behavior, but no accepted Privacy Shield integration is established by current source evidence.
+    evidence:
+      - docs/native-client-api.md
+      - clients/android/README.md
+      - clients/android/app/src/main/java/com/goreecloud/tasks/android/TasksIdentityBinding.kt
+    notes: Tasks implements privacy-first authorization and data minimization, and the Android client remains network-disabled with minimized read-contract and Identity-proof boundaries, but no accepted Privacy Shield runtime integration, purpose/retention authority, or production privacy validation is established.
+
   wardveil_security:
     result: applicable-blocked
     version: null
-    evidence: []
-    notes: Tasks has substantive security and secret-handling controls, but no accepted Wardveil Security integration is established by current source evidence.
+    evidence:
+      - docs/native-client-api.md
+      - clients/android/README.md
+      - scripts/validate_android_native_foundation.py
+      - scripts/tasks_production_readiness_manifest.json
+    notes: Tasks has substantive authorization, secret-handling, runtime-security, and fail-closed Android source controls, but no accepted Wardveil Security runtime integration or production security acceptance is established.
+
   everkeep:
     result: applicable-blocked
     version: null
-    evidence: []
-    notes: Tasks has backup, restoration, and export foundations, but accepted Everkeep integration and target-environment restore evidence remain incomplete.
+    evidence:
+      - docs/backup-operations-readiness.md
+      - docs/backup-restoration-validation.md
+      - docs/full-environment-recovery-readiness.md
+      - docs/feature-portable-export.md
+    notes: Tasks has backup, restoration, export, and recovery-readiness foundations, but accepted Everkeep integration and production-representative restore/recovery authority remain incomplete.
+
   glaze_ui:
     result: applicable-migration-required
-    version: 1.0.0
+    version: "1.4.0"
     evidence:
-    - docs/glaze-ui.md
-    - static/css/glaze.css
-    - scripts/validate_glaze_ui_consumer.py
-    - scripts/validate_glaze_ui_rendered.py
-    notes: Repository-local GLAZE UI V1.0 source mapping and automated validation are present. Migration and exact-head application acceptance against the current Platform Contract Glaze UI baseline remain incomplete.
+      - docs/glaze-ui.md
+      - static/css/glaze.css
+      - scripts/validate_glaze_ui_consumer.py
+      - scripts/validate_glaze_ui_rendered.py
+      - clients/android/README.md
+      - clients/android/app/src/main/java/com/goreecloud/tasks/android/GlazeTasksTheme.kt
+      - docs/glaze-ui-v1.4-android-adoption.md
+      - scripts/validate_android_native_foundation.py
+    notes: The native Android Development client targets current Stable GLAZE UI V1.4 / 1.4.0 at exact Stable revision 84cb3db4884042f0fa25ed6d475a127fb110f596 while repository-local Android conformance remains ADOPTION_IN_PROGRESS. The existing web application still carries older repository-local Glaze mapping/evidence and therefore the application as a whole remains migration-required. No prior web or Android source/rendered evidence is promoted into V1.4 application acceptance, and V1.4.1 human/manual/physical-device qualification remains separate.
+
   mesh:
     result: applicable-blocked
     version: null
-    evidence: []
-    notes: Canonical GoreeCloud Mesh registration, producer evidence publication, and runtime acceptance have not been established for Tasks.
+    evidence:
+      - docs/manager-api.md
+      - docs/tasks-calendar-api-v1.md
+    notes: Tasks has versioned first-party integration contracts but no accepted canonical GoreeCloud Mesh registration, producer evidence publication, capability/event transport, or runtime acceptance.
     capabilities: []
-    dependencies: []
+    dependencies:
+      - goreecloud-calendar
     published_events: []
     consumed_events: []
+
   identity:
     result: applicable-blocked
     version: null
     evidence:
-    - README.md
-    notes: Tasks currently owns its Django user model and has not completed accepted GoreeCloud Identity integration or migration.
+      - README.md
+      - clients/android/README.md
+      - clients/android/app/src/main/java/com/goreecloud/tasks/android/TasksIdentityBinding.kt
+      - clients/android/app/src/test/java/com/goreecloud/tasks/android/TasksIdentityBindingTest.kt
+    notes: Tasks still owns its Django user/application authorization model. The Android client now has a source-ready fail-closed principal/audience/lifetime acceptance contract pinned to GoreeCloud Identity native-session source semantics, but no deployed native application registration, credential exchange, protected credential storage, session runtime, production Identity migration, or accepted Identity authority exists.
+
+  sync:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - docs/native-client-api.md
+      - clients/android/README.md
+      - docs/tasks-calendar-api-v1.md
+    notes: Native offline cache, incremental synchronization, conflict reconciliation, background synchronization, and cross-device task continuity are planned but not accepted. No GoreeCloud Sync change tracking, version coordination, conflict handling, authorized replication, offline-resume, or cross-device runtime integration is established. Sync remains distinct from Everkeep backup/recovery, the server authorization model, and Calendar integration contracts.
+
 health:
   health_endpoint: /health/
   readiness_endpoint: null
+
 continuity:
   backup:
     required: true
     requirements:
-    - Preserve PostgreSQL application data, application configuration, protected secrets, and deployment manifests.
-    - Establish accepted Everkeep-compatible production backup scheduling, retention, integrity, monitoring, and independent recovery-copy evidence.
+      - Preserve PostgreSQL application data, application configuration, protected secrets, and deployment manifests.
+      - Establish accepted Everkeep-compatible production backup scheduling, retention, integrity, monitoring, and independent recovery-copy evidence.
+      - Keep GoreeCloud Sync replication and offline caches distinct from backup truth.
   restore:
     required: true
     requirements:
-    - Validate clean-target restoration of application data, configuration, publication, and service health.
-    - Complete an isolated production-representative restore and full-environment recovery exercise before Stable qualification.
+      - Validate clean-target restoration of application data, configuration, publication, and service health.
+      - Complete an isolated production-representative restore and full-environment recovery exercise before Stable qualification.
+      - Preserve current application authorization and Identity ownership through restoration and reconciliation.
   export:
     required: true
     requirements:
-    - Preserve authorization-scoped user and owner-only project archive export without widening collaboration access into bulk-export authority.
-    - Keep credentials, sessions, access tokens, and unrelated private records out of portable archives.
+      - Preserve authorization-scoped user and owner-only project archive export without widening collaboration access into bulk-export authority.
+      - Keep credentials, sessions, access tokens, and unrelated private records out of portable archives.
   portability:
     required: true
     requirements:
-    - Preserve supported GoreeCloud Tasks user/project archive formats and relationship integrity across clean-target import or restoration.
-    - Preserve provider-neutral migration boundaries and fail closed on invalid or unauthorized relationships.
+      - Preserve supported GoreeCloud Tasks user/project archive formats and relationship integrity across clean-target import or restoration.
+      - Preserve provider-neutral migration boundaries and fail closed on invalid or unauthorized relationships.
+
 external_dependencies:
-- name: Django
-  purpose: Application web framework and ORM foundation.
-  required: true
-- name: PostgreSQL
-  purpose: Multi-user production database target and validated container-development database.
-  required: true
-- name: ntfy
-  purpose: Optional private reminder-delivery service behind a least-privilege publisher boundary.
-  required: false
+  - name: Django
+    purpose: Application web framework and ORM foundation.
+    required: true
+  - name: PostgreSQL
+    purpose: Multi-user production database target and validated container-development database.
+    required: true
+  - name: ntfy
+    purpose: Optional private reminder-delivery service behind a least-privilege publisher boundary.
+    required: false
+  - name: Android platform
+    purpose: Native Android application runtime and platform integration environment.
+    required: true
+    version_constraint: ">=29"
+
 compatibility:
-  platform_contract: '0.2'
-  glaze_ui_required: 1.1.0
+  platform_contract: "0.3"
+  glaze_ui_required: "1.4.0"
   requires:
-  - goreecloud-platform-contract==0.2
-  - glaze-ui==1.1.0
+    - goreecloud-platform-contract==0.3
+    - glaze-ui==1.4.0
+    - android-api>=29
   provides:
-  - goreecloud.tasks.manager.v1
+    - goreecloud.tasks.manager.v1
+    - goreecloud.tasks.client-task-list.v1
+    - goreecloud.tasks.client-task-detail.v1
+
 evidence:
   acceptance_tests: []
   release: []
+
 conformance:
   status: nonconformant
   validated_at: null
   evidence:
-  - README.md
-  - docs/PLATFORM_CONFORMANCE.md
-  - docs/glaze-ui.md
-  - static/css/glaze.css
-  - scripts/validate_glaze_ui_consumer.py
-  - scripts/validate_glaze_ui_rendered.py
-  - docs/manager-api.md
-  - docs/manager-cross-application-validation.md
-  - docs/manager-final-topology-validation.md
-  - docs/backup-operations-readiness.md
-  - docs/backup-restoration-validation.md
-  - docs/full-environment-recovery-readiness.md
-  - docs/feature-portable-export.md
-  - scripts/tasks_production_readiness_manifest.json
+    - README.md
+    - docs/PLATFORM_CONFORMANCE.md
+    - docs/glaze-ui.md
+    - static/css/glaze.css
+    - scripts/validate_glaze_ui_consumer.py
+    - scripts/validate_glaze_ui_rendered.py
+    - docs/manager-api.md
+    - docs/manager-cross-application-validation.md
+    - docs/manager-final-topology-validation.md
+    - docs/backup-operations-readiness.md
+    - docs/backup-restoration-validation.md
+    - docs/full-environment-recovery-readiness.md
+    - docs/feature-portable-export.md
+    - docs/native-client-api.md
+    - clients/android/README.md
+    - clients/android/app/src/main/java/com/goreecloud/tasks/android/GlazeTasksTheme.kt
+    - clients/android/app/src/main/java/com/goreecloud/tasks/android/TasksIdentityBinding.kt
+    - scripts/validate_android_native_foundation.py
+    - scripts/tasks_production_readiness_manifest.json
   blockers:
-  - Migration and exact-head application acceptance against the current Platform Contract Glaze UI baseline remain incomplete.
-  - GoreeCloud Identity integration and migration are incomplete.
-  - Wardveil Security integration and acceptance are not established.
-  - Privacy Shield integration and acceptance are not established.
-  - Everkeep integration plus accepted production backup and isolated restore evidence are incomplete.
-  - GoreeCloud Mesh registration, evidence publication, and runtime acceptance are not established.
-  - Production Manager identity, network, credential, and end-to-end integration evidence remain outstanding.
-  - Target-environment production, monitoring, recovery, publication, and release evidence remain outstanding.
-  - Platform Contract adoption does not by itself authorize Stable qualification or production deployment.
+    - The native Android client targets GLAZE UI V1.4, but repository-wide web/application migration and fresh exact-head V1.4 rendered, interaction, accessibility, form-factor, representative-device, performance, rollback, release, production, and applicable V1.4.1 human/manual/device acceptance remain incomplete.
+    - GoreeCloud Identity native application registration, credential/session runtime, protected credential storage, server-side migration, and production acceptance are incomplete.
+    - Wardveil Security integration and acceptance are not established.
+    - Privacy Shield integration and acceptance are not established.
+    - Everkeep integration plus accepted production backup and isolated restore evidence are incomplete.
+    - GoreeCloud Mesh registration, evidence publication, capability/event transport, and runtime acceptance are not established.
+    - GoreeCloud Sync change tracking, authorized replication, version/conflict reconciliation, offline-resume, and cross-device continuity acceptance are not established.
+    - Production Manager identity, network, credential, and end-to-end integration evidence remain outstanding.
+    - Android authenticated remote reads, offline cache, mutations, background sync, reminders/notifications, and widgets remain blocked or not implemented.
+    - Target-environment production, monitoring, recovery, publication, protected signing/provenance, Release Candidate, and Stable evidence remain outstanding.
+    - Platform Contract adoption does not by itself authorize Stable qualification or production deployment.
