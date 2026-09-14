@@ -25,7 +25,7 @@ Repository-local management, privacy, security, continuity, interface, coordinat
 
 GoreeCloud Tasks currently has a deliberately mixed consumer state.
 
-The existing web application still implements the repository-local GLAZE UI V1.0 (`1.0.0`) migration baseline at exact historical source revision `70909bbdccad378fb7281ae1842e2f5beed64c38`. Its source mapping and rendered validation remain useful web migration evidence, but they do not establish acceptance against the current Stable consumer target.
+The existing web application still implements the repository-local GLAZE UI V1.0 (`1.0.0`) migration baseline. Its exact historical source revision is `70909bbdccad378fb7281ae1842e2f5beed64c38`. Its source mapping and rendered validation remain useful web migration evidence, but they do not establish acceptance against the current Stable consumer target.
 
 The native Android Development client targets current Stable GLAZE UI V1.4 (`1.4.0`) at exact Stable source revision `84cb3db4884042f0fa25ed6d475a127fb110f596`. Android source adoption remains `ADOPTION_IN_PROGRESS`; it does not establish rendered, accessibility, representative-device, performance, release, production, or V1.4.1 human/manual/physical-device acceptance.
 
