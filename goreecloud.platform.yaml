@@ -108,15 +108,6 @@ platform_systems:
       - clients/android/app/src/test/java/com/goreecloud/tasks/android/TasksIdentityBindingTest.kt
     notes: Tasks still owns its Django user/application authorization model. The Android client now has a source-ready fail-closed principal/audience/lifetime acceptance contract pinned to GoreeCloud Identity native-session source semantics, but no deployed native application registration, credential exchange, protected credential storage, session runtime, production Identity migration, or accepted Identity authority exists.
 
-  sync:
-    result: applicable-blocked
-    version: null
-    evidence:
-      - docs/native-client-api.md
-      - clients/android/README.md
-      - docs/tasks-calendar-api-v1.md
-    notes: Native offline cache, incremental synchronization, conflict reconciliation, background synchronization, and cross-device task continuity are planned but not accepted. No GoreeCloud Sync change tracking, version coordination, conflict handling, authorized replication, offline-resume, or cross-device runtime integration is established. Sync remains distinct from Everkeep backup/recovery, the server authorization model, and Calendar integration contracts.
-
 health:
   health_endpoint: /health/
   readiness_endpoint: null
