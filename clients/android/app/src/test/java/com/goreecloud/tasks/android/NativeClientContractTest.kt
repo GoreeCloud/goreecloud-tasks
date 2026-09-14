@@ -44,9 +44,10 @@ class NativeClientContractTest {
     }
 
     @Test
-    fun developmentCapabilitiesSeparateProofContractFromRuntimeAuthority() {
+    fun developmentCapabilitiesSeparateSourceContractsFromRuntimeAuthority() {
         val snapshot = TasksNativeClientContract.capabilitySnapshot()
         assertEquals(NativeCapabilityState.SOURCE_READY, snapshot.readApiContract)
+        assertEquals(NativeCapabilityState.SOURCE_READY, snapshot.responseAcceptanceContract)
         assertEquals(NativeCapabilityState.ADOPTION_IN_PROGRESS, snapshot.glazeUiV14)
         assertEquals(
             NativeCapabilityState.SOURCE_READY,

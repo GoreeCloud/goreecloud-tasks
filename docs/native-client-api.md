@@ -16,7 +16,7 @@ Both initial endpoints use the currently authenticated GoreeCloud Tasks user ses
 
 This Development tranche deliberately does **not** introduce a mobile bearer-token database, device credential format, refresh-token protocol, GoreeCloud Identity acceptance claim, or background synchronization authority. Those are separate security and runtime milestones.
 
-The first Android client foundation now exists under `clients/android/`, but it intentionally does not declare network authority. It models and validates the accepted API paths locally while keeping remote list/detail reads blocked until a native GoreeCloud Identity/session exchange is defined and accepted. It does not copy browser cookies, embed reusable application-wide credentials, or invent a second authentication model.
+The first Android client foundation exists under `clients/android/`, but it intentionally does not declare network authority. It models and validates the accepted API paths and response invariants locally while keeping remote list/detail reads blocked until a native GoreeCloud Identity/session exchange is defined and accepted. It does not copy browser cookies, embed reusable application-wide credentials, or invent a second authentication model.
 
 ## Task list
 
@@ -65,12 +65,38 @@ Responses use `Cache-Control: private, no-store` and vary on the authenticated s
 
 Authorization remains dynamic. A project-membership revocation removes both list and detail access to the associated shared task on subsequent requests. Project filters cannot reveal a project the user otherwise cannot read.
 
+## Android response acceptance contract
+
+The Android client now contains a transport-neutral `NativeTaskResponseContract` for the two minimized schemas. This is a pure source-level consumer policy, not network implementation.
+
+It requires:
+
+- exact list/detail schema identifiers and version `1`;
+- parseable offset-aware generation and task timestamps;
+- exact expected authorization identity and exact list/detail scope strings;
+- list filter echoes that match the request actually planned by the client;
+- returned-count equality, requested-limit enforcement, and unique task ids;
+- positive project/user/label/parent identifiers where present;
+- current server priority values `0..4`;
+- current status values `planned`, `ready`, `in_progress`, `blocked`, `delayed`, `waiting`, `completed`, and `cancelled`;
+- current recurrence values `none`, `daily`, `weekly`, and `monthly`;
+- recurring tasks to include `due_at`;
+- `updated_at` not to precede `created_at`;
+- completed tasks to contain `completed_at`, while non-completed tasks must not;
+- detail responses to match the requested task id; and
+- unique, positive label identifiers in detail responses.
+
+The contract also defines exact field allowlists for top-level list/detail objects and their nested authorization, filter, task, project, user, choice, and label records. A future decoder must reject unknown fields before invoking the typed acceptance policy. This preserves the current minimization boundary and prevents comments, reminders, operational metadata, credentials, or other unrelated server fields from silently entering the trusted native model.
+
+A successful response decision does not authenticate transport and does not cache authority. Server-side `visible_to(user)` and `editable_by(user)` remain authoritative on every request.
+
 ## Android client foundation
 
-The first Android Development client is intentionally bounded:
+The Android Development client is intentionally bounded:
 
 - it targets the current Stable GLAZE UI V1.4 / `1.4.0` contract and records adoption as in progress rather than accepted conformance;
 - it constructs only the documented native list/detail endpoint family and validates client-side filter bounds before transport;
+- it contains a source-ready response-acceptance layer but no JSON/network implementation;
 - it does not currently hold network authority;
 - it does not hold or synthesize native identity/session credentials;
 - it does not create a parallel authoritative task database;
@@ -79,15 +105,16 @@ The first Android Development client is intentionally bounded:
 
 ## Follow-on milestones
 
-1. Define GoreeCloud Identity/session exchange for native clients without reusable application-wide credentials.
-2. Add authenticated read-only Android transport while preserving server authorization and private/no-store behavior.
-3. Parse and render the accepted list/detail schemas on Android without broadening authorization.
-4. Add conditional mutation APIs using the existing editability rules plus explicit conflict/version semantics.
-5. Add incremental synchronization cursors and bounded local-cache reconciliation.
-6. Add notification/reminder registration without exposing another user's notification state.
-7. Establish offline mutation queues only after conflict, revocation, and recovery behavior is defined and tested.
-8. Add representative-device, accessibility, background-work, Wardveil, Privacy Shield, Everkeep, signing/provenance, and release acceptance.
+1. Implement and accept the GoreeCloud Identity/session exchange for native clients without reusable application-wide credentials.
+2. Add an exact-field list/detail decoder that rejects unknown fields before typed response acceptance.
+3. Add authenticated read-only Android transport while preserving server authorization and private/no-store behavior.
+4. Render only accepted list/detail responses without broadening authorization.
+5. Add conditional mutation APIs using the existing editability rules plus explicit conflict/version semantics.
+6. Add incremental synchronization cursors and bounded local-cache reconciliation.
+7. Add notification/reminder registration without exposing another user's notification state.
+8. Establish offline mutation queues only after conflict, revocation, and recovery behavior is defined and tested.
+9. Add representative-device, accessibility, background-work, Wardveil, Privacy Shield, Everkeep, signing/provenance, and release acceptance.
 
 ## Acceptance boundary
 
-The read-only server endpoints and first Android shell are Development evidence only. They do not establish production publication, GoreeCloud Identity acceptance, authenticated Android remote reads, background synchronization, offline write authority, GLAZE UI consumer conformance, Privacy Shield acceptance, Wardveil acceptance, Everkeep recovery acceptance, Release Candidate status, or Stable status.
+The read-only server endpoints, Android request/response contracts, and first Android shell are Development evidence only. They do not establish production publication, GoreeCloud Identity acceptance, authenticated Android remote reads, background synchronization, offline write authority, GLAZE UI consumer conformance, Privacy Shield acceptance, Wardveil acceptance, Everkeep recovery acceptance, Release Candidate status, or Stable status.
